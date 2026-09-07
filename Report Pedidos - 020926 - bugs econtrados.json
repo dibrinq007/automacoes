@@ -1,0 +1,970 @@
+{
+  "name": "Report Pedidos - 020926 - bugs econtrados",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "",
+        "height": 320,
+        "width": 764,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        26544,
+        304
+      ],
+      "id": "13ab7438-1dc9-44e1-8a64-8eaec9b90c24",
+      "name": "Sticky Note - Aprovação"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3c940697-08b1-4ed3-bf32-efe4a12af477",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        26832,
+        384
+      ],
+      "id": "7c13437c-01eb-4e48-a6b4-05fa7bbb164f",
+      "name": "Verificar Aprovação"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "dcardoso@totvs.com.br",
+        "subject": "={{ 'Aprovação necessária: Relatório de Cobertura de Testes Automatizados – Pedidos (' + ($json.sem_novos_casos ? 'sem novos casos no período' : $json.total_casos + ' novo(s) caso(s)') + ')' }}",
+        "message": "={{ $json.html }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "Aprovar",
+            "disapproveLabel": "Reprovar"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        26608,
+        384
+      ],
+      "id": "72cdd51d-4947-4c44-b110-1cb0719e80ef",
+      "name": "Enviar Email de Aprovação",
+      "webhookId": "095d68d1-aad5-4cba-8cd1-50f0ad3b8f55",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "WpwwCCNuMfYpJDtE",
+          "name": "diegocsantos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Define quais pastas do repositorio devem entrar na contagem TOTAL de casos\n// de teste do projeto. Antes só existia \"/tests\" (hardcoded no nó \"Listar\n// Arquivos de Teste\"), por isso a pasta \"/tests_performance\" nunca era\n// buscada nem contada no relatório. Para adicionar/remover uma pasta da\n// contagem, basta editar esta lista.\nreturn [\n  { json: { pasta: \"tests\" } } ,\n  { json: { pasta: \"tests_performance\" } } ,\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        22752,
+        112
+      ],
+      "id": "1035b621-0452-49e7-a69a-d64cbcef645f",
+      "name": "Definir Pastas de Teste"
+    },
+    {
+      "parameters": {
+        "content": "                   Preparação das informações dos novos casos de testes no relatório e envio.",
+        "height": 320,
+        "width": 880,
+        "color": "#207E2B"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        25648,
+        304
+      ],
+      "id": "2ca6f503-c4e7-4191-bdba-b58f229e20be",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "                   #Tratamento para diferenciar os novos casos de testes no azure por periodo",
+        "height": 320,
+        "width": 2928,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        22688,
+        304
+      ],
+      "id": "94e582e8-67c7-4895-806c-306521682ec3",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "                     #Buscar total de casos de testes no projeto",
+        "height": 256,
+        "width": 1136,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        22688,
+        0
+      ],
+      "id": "3613a9b5-ef8a-4896-9dd2-5fab0ffa5343",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Conta o total geral de casos de teste que o projeto possui HOJE, considerando\n// todos os arquivos .robot das pastas /tests e /tests_performance na branch\n// develop (já inclui os casos novos identificados neste mesmo período, pois eles\n// já estão na branch).\n//\n// CORREÇÕES aplicadas nesta versão (motivo da divergência 355 x 359 apontada\n// pelo QA ao comparar com a busca \"@GTPDV\" feita direto no VSCode):\n//\n// 1) A pasta \"/tests_performance\" não era buscada (só \"/tests\" existia no nó\n//    \"Listar Arquivos de Teste\"), então os casos de lá nunca entravam na conta.\n//    Corrigido no nó \"Definir Pastas de Teste\" + \"Listar Arquivos de Teste\".\n//\n// 2) O regex antigo exigia um \"-\" logo após o código do caso, no formato\n//    \"@GTPDV-T12345 - Descrição\". Casos nomeados como\n//    \"@GTPDV-T12345 Descrição - Subdescrição\" (sem hífen logo após o código —\n//    é o que acontece, por exemplo, com GTPDV-T19854 e GTPDV-T19865 em\n//    14.Pedidos_json.robot) nunca eram reconhecidos e ficavam de fora da\n//    contagem. O novo regex identifica o caso pela posição no arquivo (início\n//    de linha, sem indentação — é assim que o Robot Framework delimita o nome\n//    de um caso de teste dentro de \"*** Test Cases ***\"), e não depende mais\n//    de haver um hífen logo em seguida.\n\nconst arquivos = $input.all();\n\n// ocorrenciasPorCodigo: Map<codigo, [{arquivo, caminho}]> — usado tanto para\n// contar o total de códigos únicos quanto para detectar duplicidade (mesmo\n// código aparecendo mais de uma vez, seja duas vezes no mesmo arquivo, seja\n// em arquivos diferentes). Um código duplicado é um ID de caso reaproveitado\n// por engano e quebra a rastreabilidade do relatório.\nconst ocorrenciasPorCodigo = new Map();\nconst porArquivo = [];\n\n// Auditoria de tags obrigatórias: TODO caso de teste do projeto (não só os\n// novos do período) precisa ter uma tag de criticidade (baixo/medio/alto/\n// critico) e a tag \"regressivo-completo\". Quem não tiver entra nestas listas\n// e vira alerta no relatório.\nconst CRITICIDADES_VALIDAS = [\"baixo\", \"medio\", \"alto\", \"critico\"];\nconst casosSemCriticidade = [];\nconst casosSemRegressivoCompleto = [];\n\n// =====================================================================\n// NOVO: extração de bug via [Documentation]. Padrão no repositório:\n//   [Documentation]    [Bug]     DVAROMNIP-1234:  Título da issue\n// Pode vir com continuação Robot Framework (\"...\" na(s) linha(s)\n// seguinte(s)) quando a documentação é multi-linha. Regra confirmada\n// com o QA: no máximo 1 bug por caso de teste. Roda sobre TODO o\n// projeto (não só os casos novos do período), mesmo padrão já usado\n// para \"casosSemCriticidade\"/\"casosSemRegressivoCompleto\" acima.\n// =====================================================================\nconst RE_BUG = /\\[Bug\\]\\s+DVAROMNIP-(\\d+):\\s*(.+)/i;\n\nfunction extrairInfoBug(bloco) {\n    const linhasBloco = bloco.split(/\\r?\\n/);\n    const indiceDoc = linhasBloco.findIndex((linha) => /^\\s*\\[Documentation\\]/i.test(linha));\n\n    if (indiceDoc === -1) return null;\n\n    const partesDoc = [linhasBloco[indiceDoc].replace(/^\\s*\\[Documentation\\]\\s*/i, \"\")];\n\n    for (let i = indiceDoc + 1; i < linhasBloco.length; i++) {\n        const continuacao = linhasBloco[i].match(/^\\s*\\.\\.\\.\\s?(.*)$/);\n        if (!continuacao) break;\n        partesDoc.push(continuacao[1]);\n    }\n\n    const documentacao = partesDoc.join(\"\\n\");\n    const bugMatch = documentacao.match(RE_BUG);\n\n    if (!bugMatch) return null;\n\n    return {\n        issue: \"DVAROMNIP-\" + bugMatch[1],\n        titulo_issue: bugMatch[2].trim()\n    };\n}\n\n// codigo -> { codigo, issue, titulo_issue, arquivo, caminho, linha }\n// para casos de teste cujo [Documentation] referencia um bug aberto.\nconst casosComBugPorCodigo = new Map();\n\nfor (const item of arquivos) {\n    const conteudo = item.json.content || \"\";\n\n    // \"path\" vem preenchido pela própria API do Azure DevOps na resposta do\n    // download (fallback para \"caminho_arquivo\" caso a API não devolva path).\n    const caminho = item.json.path || item.json.caminho_arquivo || \"desconhecido\";\n\n    const partes = caminho.split(\"/\").filter(Boolean);\n    const nomeArquivo = partes[partes.length - 1] || caminho;\n    const pasta = partes.length > 1 ? partes[partes.length - 2] : \"\";\n\n    // Nome de um caso de teste = início de linha, sem indentação, opcionalmente\n    // com \"@\" na frente, seguido do código GTPDV-Txxxx — independente do que\n    // vem depois na mesma linha (hífen ou não).\n    const encontrados = [...conteudo.matchAll(/^@?(GTPDV-T\\d+)\\b/gm)];\n\n    const codigosDoArquivo = new Set();\n\n    encontrados.forEach((match, idx) => {\n        const codigo = match[1];\n        codigosDoArquivo.add(codigo);\n\n        // Bloco do caso: do início deste match até o início do próximo caso\n        // (ou fim do arquivo) — mesma lógica usada em \"Enriquecer Caso de\n        // Teste\", só que aqui aplicada a TODOS os casos do arquivo de uma vez.\n        const inicio = match.index;\n        const fim = encontrados[idx + 1]?.index ?? conteudo.length;\n        const bloco = conteudo.substring(inicio, fim);\n\n        // Número da linha (1-indexado) onde o caso começa no arquivo, para dar\n        // ao QA o \"arquivo:linha\" exato a corrigir (contagem de \\n antes do match).\n        const linha = conteudo.substring(0, inicio).split(\"\\n\").length;\n\n        if (!ocorrenciasPorCodigo.has(codigo)) ocorrenciasPorCodigo.set(codigo, []);\n        ocorrenciasPorCodigo.get(codigo).push({ arquivo: nomeArquivo, caminho, linha });\n\n        const tagsMatch = bloco.match(/\\[Tags\\](.*)/);\n        const tags = tagsMatch\n            ? tagsMatch[1].trim().split(/\\s{2,}|\\t+/).filter(Boolean)\n            : [];\n        const linhaTags = tagsMatch ? tagsMatch[1].trim() : \"(sem linha [Tags])\";\n\n        const temCriticidade = tags.some((t) => CRITICIDADES_VALIDAS.includes(t));\n        const temRegressivoCompleto = tags.includes(\"regressivo-completo\");\n\n        if (!temCriticidade) {\n            casosSemCriticidade.push({ codigo, arquivo: nomeArquivo, caminho, linha, linhaTags });\n        }\n        if (!temRegressivoCompleto) {\n            casosSemRegressivoCompleto.push({ codigo, arquivo: nomeArquivo, caminho, linha, linhaTags });\n        }\n\n        if (!casosComBugPorCodigo.has(codigo)) {\n            const infoBug = extrairInfoBug(bloco);\n            if (infoBug) {\n                casosComBugPorCodigo.set(codigo, {\n                    codigo,\n                    issue: infoBug.issue,\n                    titulo_issue: infoBug.titulo_issue,\n                    arquivo: nomeArquivo,\n                    caminho,\n                    linha\n                });\n            }\n        }\n    });\n\n    porArquivo.push({\n        arquivo: nomeArquivo,\n        pasta,\n        caminho,\n        quantidade: codigosDoArquivo.size\n    });\n}\n\n// Códigos que apareceram mais de uma vez (mesmo arquivo ou arquivos\n// diferentes) no projeto inteiro.\nconst codigosDuplicados = [...ocorrenciasPorCodigo.entries()]\n    .filter(([, ocorrencias]) => ocorrencias.length > 1)\n    .map(([codigo, ocorrencias]) => ({ codigo, ocorrencias }));\n\n// Ordena por pasta e depois por nome do arquivo (numérico), para bater com a\n// árvore de pastas do repositório e facilitar a conferência manual.\nporArquivo.sort((a, b) => {\n    if (a.pasta !== b.pasta) return a.pasta.localeCompare(b.pasta);\n    return a.arquivo.localeCompare(b.arquivo, undefined, { numeric: true });\n});\n\nconst totalPorPastaMapa = {};\nfor (const linha of porArquivo) {\n    totalPorPastaMapa[linha.pasta] = (totalPorPastaMapa[linha.pasta] || 0) + linha.quantidade;\n}\n\nconst totalPorPasta = Object.entries(totalPorPastaMapa).map(([pasta, quantidade]) => ({\n    pasta,\n    quantidade\n}));\n\nreturn [\n    {\n        json: {\n            total_geral: ocorrenciasPorCodigo.size,\n            por_suite: porArquivo,\n            total_por_pasta: totalPorPasta,\n            codigos_duplicados: codigosDuplicados,\n            casos_sem_criticidade: casosSemCriticidade,\n            casos_sem_regressivo_completo: casosSemRegressivoCompleto,\n            // NOVO: casos do projeto inteiro com bug aberto referenciado no\n            // [Documentation] (issue DVAROMNIP).\n            casos_com_bug: [...casosComBugPorCodigo.values()].sort((a, b) =>\n                a.codigo.localeCompare(b.codigo, \"pt-BR\", { numeric: true })\n            )\n        }\n    }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23632,
+        112
+      ],
+      "id": "5b0dde36-2c4c-4165-bec1-f9316e9d1138",
+      "name": "Contar Total de Casos do Projeto"
+    },
+    {
+      "parameters": {
+        "url": "=https://dev.azure.com/totvstfs/Solucoes-Varejo/_apis/git/repositories/Omni-TAUT-Pedidos/items/{{ $json.caminho_arquivo }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "versionDescriptor.version",
+              "value": "develop"
+            },
+            {
+              "name": "versionDescriptor.versionType",
+              "value": "branch"
+            },
+            {
+              "name": "includeContent",
+              "value": "true"
+            },
+            {
+              "name": "api-version",
+              "value": "7.1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        23408,
+        112
+      ],
+      "id": "a21a7856-88fd-4133-855b-9f3119420b3a",
+      "name": "Baixar Conteúdo dos Arquivos de Teste",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uoJACCih8DiEJ69p",
+          "name": "azure totvs"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega a lista completa de itens (arquivos e pastas) retornada pela API do\n// Azure DevOps. O nó anterior (\"Listar Arquivos de Teste\") agora roda uma vez\n// para CADA pasta configurada em \"Definir Pastas de Teste\" (ex.: \"tests\" e\n// \"tests_performance\"), então recebemos aqui um item de entrada por pasta, e\n// precisamos combinar o resultado de todas elas em vez de olhar somente para\n// o primeiro item (bug anterior: só a 1ª pasta buscada era considerada).\nconst arquivosRobot = [];\n\nfor (const entrada of $input.all()) {\n    const itens = entrada.json.value || [];\n\n    const robots = itens.filter(item =>\n        item.gitObjectType === \"blob\" &&\n        (item.path || \"\").toLowerCase().endsWith(\".robot\")\n    );\n\n    arquivosRobot.push(...robots);\n}\n\nreturn arquivosRobot.map(item => ({\n    json: {\n        caminho_arquivo: item.path\n    }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23184,
+        112
+      ],
+      "id": "d13b2fad-022d-4d29-a6c7-9957879c8ddc",
+      "name": "Filtrar Arquivos Robot"
+    },
+    {
+      "parameters": {
+        "url": "https://dev.azure.com/totvstfs/Solucoes-Varejo/_apis/git/repositories/Omni-TAUT-Pedidos/items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "scopePath",
+              "value": "=/{{ $json.pasta }}"
+            },
+            {
+              "name": "recursionLevel",
+              "value": "Full"
+            },
+            {
+              "name": "versionDescriptor.version",
+              "value": "develop"
+            },
+            {
+              "name": "versionDescriptor.versionType",
+              "value": "branch"
+            },
+            {
+              "name": "api-version",
+              "value": "7.1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        22960,
+        112
+      ],
+      "id": "f8ae5a1b-86a2-4725-b9f2-511c7a95a433",
+      "name": "Listar Arquivos de Teste",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uoJACCih8DiEJ69p",
+          "name": "azure totvs"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "dcardoso@totvs.com.br, marcela.jesus@totvs.com.br, luiz.hsantos@totvs.com.br",
+        "subject": "={{ 'Relatório de Cobertura de Testes Automatizados – Pedidos (' + ($json.sem_novos_casos ? 'sem novos casos no período' :  $('Preparar Dados para Relatório').item.json.resumo.total_casos + ' novo(s) caso(s)') + ')' }}",
+        "message": "={{ $('Gerar Relatório HTML').item.json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        27088,
+        368
+      ],
+      "id": "2e63f810-8349-49ea-9dd8-c46240ad6289",
+      "name": "Enviar email",
+      "webhookId": "a727b223-f7b1-439a-a533-5d4194b2f533",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "WpwwCCNuMfYpJDtE",
+          "name": "diegocsantos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =====================================================================================\n// NÓ: Gerar Relatório HTML (versão E-MAIL)\n// TIPO: Code Node (JavaScript) - n8n\n// ENTRADA ESPERADA: item.json vindo do nó \"Preparar Dados para Relatório\"\n//   { periodo_criacao_inicio, periodo_criacao_fim, resumo, rankings, indicadores, recursos, casos, casos_removidos, insights }\n// SAÍDA: { json: { html, periodo_criacao_inicio, periodo_criacao_fim, total_casos, total_casos_removidos } }\n//\n// POR QUE UMA VERSÃO DIFERENTE?\n// Clientes de e-mail (Outlook, Gmail, etc.) usam motores de renderização limitados:\n//   - Outlook usa o motor do Word (não suporta grid, flexbox, position, :hover, var())\n//   - Gmail remove tags <style> em alguns contextos (webmail)\n// Por isso, este nó usa APENAS:\n//   - Tabelas HTML (<table>) para layout\n//   - Estilos INLINE (style=\"...\") em cada elemento\n//   - Cores fixas (sem variáveis CSS)\n// Isso garante que o relatório chegue formatado corretamente para os gestores,\n// independente do cliente de e-mail usado.\n// =====================================================================================\n\n// -------------------------------------------------------------------------------------\n// 1. LEITURA DOS DADOS DE ENTRADA\n// -------------------------------------------------------------------------------------\nconst dados = $input.first().json;\n\nconst {\n  periodo_criacao_inicio = \"\",\n  periodo_criacao_fim = \"\",\n  resumo = {},\n  rankings = {},\n  indicadores = {},\n  recursos = {},\n  casos = [],\n  casos_removidos = [],\n  insights = [],\n  por_suite = [],\n  total_por_pasta = [],\n  casos_sem_criticidade = [],\n  casos_sem_regressivo_completo = [],\n  casos_com_bug = [],\n  codigos_duplicados = []\n} = dados;\n\n// =====================================================================================\n// 2. PALETA DE CORES (centralizada para fácil ajuste futuro)\n// =====================================================================================\nconst CORES = {\n  primaria: \"#4f46e5\",\n  primariaEscura: \"#3730a3\",\n  fundoPagina: \"#eef0f5\",\n  fundoCard: \"#ffffff\",\n  textoPrimario: \"#1a1d29\",\n  textoSecundario: \"#6b7280\",\n  borda: \"#e5e7eb\",\n  fundoDestaque: \"#eef2ff\",\n  verde: \"#16a34a\",\n  verdeFundo: \"#dcfce7\",\n  vermelho: \"#dc2626\",\n  vermelhoFundo: \"#fee2e2\",\n  laranja: \"#ea580c\",\n  laranjaFundo: \"#ffedd5\",\n  amarelo: \"#a16207\",\n  amareloFundo: \"#fef9c3\",\n  cinzaFundo: \"#e5e7eb\",\n  cinzaTexto: \"#374151\"\n};\n\nconst FONTE = \"Arial, Helvetica, sans-serif\";\nconst LARGURA_TOTAL = 640; // largura segura para a maioria dos clientes de e-mail\n\n// =====================================================================================\n// 3. FUNÇÕES UTILITÁRIAS\n// =====================================================================================\n\nfunction escapeHtml(texto) {\n  if (texto === null || texto === undefined) return \"\";\n  return String(texto)\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}\n\n/** Formata uma data ISO (ex: 2026-07-16T00:00:00.000Z) para dd/mm/aaaa. */\nfunction formatarData(iso) {\n  if (!iso) return \"\";\n  const d = new Date(iso);\n  if (isNaN(d.getTime())) return String(iso);\n  return d.toLocaleDateString(\"pt-BR\");\n}\n\n/** Retorna { texto, corTexto, corFundo } para badges de criticidade. */\nfunction estiloCriticidade(criticidade) {\n  const chave = String(criticidade || \"\").toLowerCase();\n  const mapa = {\n    critico: { cor: CORES.vermelho, fundo: CORES.vermelhoFundo },\n    alto: { cor: CORES.laranja, fundo: CORES.laranjaFundo },\n    medio: { cor: CORES.amarelo, fundo: CORES.amareloFundo },\n    baixo: { cor: CORES.verde, fundo: CORES.verdeFundo }\n  };\n  return mapa[chave] || { cor: CORES.cinzaTexto, fundo: CORES.cinzaFundo };\n}\n\n/** Retorna { cor, fundo } para badges de complexidade. */\nfunction estiloComplexidade(complexidade) {\n  const chave = String(complexidade || \"\").toLowerCase();\n  const mapa = {\n    \"muito alta\": { cor: CORES.vermelho, fundo: CORES.vermelhoFundo },\n    \"alta\": { cor: CORES.laranja, fundo: CORES.laranjaFundo },\n    \"média\": { cor: CORES.amarelo, fundo: CORES.amareloFundo },\n    \"media\": { cor: CORES.amarelo, fundo: CORES.amareloFundo },\n    \"baixa\": { cor: CORES.verde, fundo: CORES.verdeFundo }\n  };\n  return mapa[chave] || { cor: CORES.cinzaTexto, fundo: CORES.cinzaFundo };\n}\n\nfunction maiorQuantidade(lista) {\n  if (!lista || lista.length === 0) return 1;\n  return Math.max(...lista.map((item) => item.quantidade || 0), 1);\n}\n\n/** Gera um badge (pílula colorida) usando tabela inline, seguro para Outlook. */\nfunction gerarBadge(texto, cor, fundo) {\n  return `\n    <span style=\"display:inline-block; padding:3px 10px; border-radius:12px;\n      font-size:12px; font-weight:bold; color:${cor}; background-color:${fundo};\n      text-transform:capitalize; white-space:nowrap; font-family:${FONTE};\">\n      ${escapeHtml(texto)}\n    </span>\n  `;\n}\n\n/** Gera uma barra de progresso baseada em tabela (compatível com Outlook).\n *  CORREÇÃO: com percentual=0, um <td width=\"0%\"> ainda com conteúdo (&nbsp;)\n *  não colapsa de forma confiável em vários clientes de e-mail — o motor do\n *  Word (Outlook) e alguns webmails ignoram width=\"0%\" e distribuem o espaço\n *  50/50 entre as duas células da tabela, fazendo a barra aparecer \"pela\n *  metade\" mesmo sem nenhum caso. Por isso, quando p=0, a célula colorida\n *  nem é criada — a tabela vira uma única célula de fundo, garantindo barra\n *  visualmente vazia em qualquer cliente. */\nfunction gerarBarra(percentual, corBarra, corFundo, altura) {\n  const p = Math.max(0, Math.min(100, Math.round(percentual)));\n\n  if (p === 0) {\n    return `\n      <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n        style=\"border-collapse:collapse; background-color:${corFundo}; border-radius:6px; overflow:hidden;\">\n        <tr>\n          <td height=\"${altura}\" style=\"font-size:1px; line-height:1px;\">&nbsp;</td>\n        </tr>\n      </table>\n    `;\n  }\n\n  return `\n    <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n      style=\"border-collapse:collapse; background-color:${corFundo}; border-radius:6px; overflow:hidden;\">\n      <tr>\n        <td width=\"${p}%\" height=\"${altura}\" bgcolor=\"${corBarra}\" style=\"width:${p}%; font-size:1px; line-height:1px;\">&nbsp;</td>\n        <td style=\"font-size:1px; line-height:1px;\">&nbsp;</td>\n      </tr>\n    </table>\n  `;\n}\n\n// =====================================================================================\n// 4. GERAÇÃO DE BLOCOS (cada função monta uma seção, sempre com tabelas + inline CSS)\n// =====================================================================================\n\n/** Tabela com o total de casos de teste por suíte (arquivo .robot), calculado\n *  ao vivo em todo o projeto (pastas /tests e /tests_performance). Foi\n *  adicionada a pedido do QA, para bater de forma rápida com a árvore de\n *  pastas do repositório e detectar divergências de contagem por arquivo. */\nfunction gerarTabelaPorSuite() {\n  if (!por_suite || por_suite.length === 0) return \"\";\n\n  const cardsPasta = (total_por_pasta || [])\n    .map(\n      (p) => `\n      <td width=\"50%\" style=\"padding:6px;\" valign=\"top\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n          style=\"background-color:${CORES.fundoCard}; border:1px solid ${CORES.borda};\n          border-left:4px solid ${CORES.primaria}; border-radius:6px;\">\n          <tr>\n            <td style=\"padding:14px 16px; font-family:${FONTE};\">\n              <div style=\"font-size:11px; color:${CORES.textoSecundario}; letter-spacing:0.03em; margin-bottom:4px;\">\n                PASTA \"${escapeHtml(p.pasta || \"-\")}\"\n              </div>\n              <div style=\"font-size:17px; font-weight:bold; color:${CORES.textoPrimario};\">\n                ${p.quantidade} caso(s)\n              </div>\n            </td>\n          </tr>\n        </table>\n      </td>\n    `\n    )\n    .join(\"\");\n\n  const linhas = por_suite\n    .map((linha, index) => {\n      const bgLinha = index % 2 === 0 ? \"#ffffff\" : \"#fafbff\";\n      return `\n        <tr style=\"background-color:${bgLinha};\">\n          <td style=\"padding:7px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoPrimario}; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${escapeHtml(linha.arquivo)}\n          </td>\n          <td style=\"padding:7px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoSecundario}; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${escapeHtml(linha.pasta)}\n          </td>\n          <td align=\"right\" style=\"padding:7px 10px; font-family:${FONTE}; font-size:12px; font-weight:bold; color:${CORES.primaria}; border-bottom:1px solid ${CORES.borda};\">\n            ${linha.quantidade}\n          </td>\n        </tr>\n      `;\n    })\n    .join(\"\");\n\n  const somaPorSuite = por_suite.reduce((soma, l) => soma + (l.quantidade || 0), 0);\n  const observacaoDivergencia =\n    somaPorSuite !== (resumo.total_geral_projeto ?? somaPorSuite)\n      ? `<div style=\"font-family:${FONTE}; font-size:10px; color:${CORES.laranja}; margin-top:6px;\">\n           &#9888; A soma por suíte (${somaPorSuite}) difere do total geral único (${resumo.total_geral_projeto}).\n           Isso acontece se o mesmo código de caso aparecer em mais de um arquivo — vale conferir.\n         </div>`\n      : \"\";\n\n  return `\n    <tr>\n      <td style=\"padding:16px 24px 8px; font-family:${FONTE};\">\n        <div style=\"font-size:16px; font-weight:bold; color:${CORES.textoPrimario}; margin-bottom:10px;\">\n          Casos de Teste por Suíte (Total no Projeto)\n        </div>\n\n        ${\n          cardsPasta\n            ? `<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"margin-bottom:10px;\"><tr>${cardsPasta}</tr></table>`\n            : \"\"\n        }\n\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n          style=\"background-color:${CORES.fundoCard}; border:1px solid ${CORES.borda}; border-radius:6px; overflow:hidden;\">\n          <tr style=\"background-color:#f8f9fc;\">\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.textoSecundario}; border-bottom:2px solid ${CORES.borda};\">Suíte (arquivo .robot)</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.textoSecundario}; border-bottom:2px solid ${CORES.borda};\">Pasta</th>\n            <th align=\"right\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.textoSecundario}; border-bottom:2px solid ${CORES.borda};\">Qtd. Casos</th>\n          </tr>\n          ${linhas}\n          <tr style=\"background-color:${CORES.fundoDestaque};\">\n            <td colspan=\"2\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:12px; font-weight:bold; color:${CORES.textoPrimario};\">TOTAL GERAL</td>\n            <td align=\"right\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:13px; font-weight:bold; color:${CORES.primaria};\">${somaPorSuite}</td>\n          </tr>\n        </table>\n        ${observacaoDivergencia}\n      </td>\n    </tr>\n  `;\n}\n\n/** Cabeçalho do relatório. */\nfunction gerarCabecalho() {\n  return `\n    <tr>\n      <td style=\"background-color:${CORES.primariaEscura}; padding:28px 32px; border-radius:8px 8px 0 0;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n          <tr>\n            <td style=\"font-family:${FONTE}; color:#ffffff; font-size:22px; font-weight:bold;\">\n              Relatório de Cobertura de Testes Automatizados – Pedidos\n            </td>\n          </tr>\n          <tr>\n            <td style=\"font-family:${FONTE}; color:#dbe0ff; font-size:13px; padding-top:6px;\">\n              Período: ${escapeHtml(formatarData(periodo_criacao_inicio))} até ${escapeHtml(formatarData(periodo_criacao_fim))}\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n  `;\n}\n\n/** Cards de indicadores gerais, em formato de tabela 2 colunas (empilha bem no mobile). */\nfunction gerarCardsIndicadores() {\n  const cards = [\n    { titulo: \"NOVOS CASOS NO PERÍODO\", valor: resumo.total_casos ?? \"-\", cor: \"#3b82f6\" },\n    { titulo: \"TOTAL GERAL NO PROJETO\", valor: resumo.total_geral_projeto ?? \"-\", cor: \"#0ea5e9\" },\n    { titulo: \"CASOS REMOVIDOS\", valor: resumo.total_casos_removidos ?? 0, cor: \"#dc2626\" },\n    {\n      titulo: \"PRINCIPAL FUNCIONALIDADE\",\n      valor: resumo.principal_funcionalidade ?? \"-\",\n      extra: resumo.principal_funcionalidade_qtd ? `${resumo.principal_funcionalidade_qtd} caso(s)` : \"\",\n      cor: \"#8b5cf6\"\n    },\n    { titulo: \"PRINCIPAL CRITICIDADE\", valor: resumo.principal_criticidade ?? \"-\", cor: \"#ef4444\" },\n    { titulo: \"PRINCIPAL REGRESSÃO\", valor: resumo.principal_regressao ?? \"-\", cor: \"#22c55e\" }\n  ];\n\n  // Monta em pares de 2 colunas por linha (mais seguro que 4 colunas em telas pequenas)\n  let linhas = \"\";\n  for (let i = 0; i < cards.length; i += 2) {\n    const par = cards.slice(i, i + 2);\n    const celulas = par\n      .map(\n        (c) => `\n        <td width=\"50%\" style=\"padding:6px;\" valign=\"top\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n            style=\"background-color:${CORES.fundoCard}; border:1px solid ${CORES.borda};\n            border-left:4px solid ${c.cor}; border-radius:6px;\">\n            <tr>\n              <td style=\"padding:14px 16px; font-family:${FONTE};\">\n                <div style=\"font-size:11px; color:${CORES.textoSecundario}; letter-spacing:0.03em; margin-bottom:4px;\">\n                  ${escapeHtml(c.titulo)}\n                </div>\n                <div style=\"font-size:17px; font-weight:bold; color:${CORES.textoPrimario}; text-transform:capitalize;\">\n                  ${escapeHtml(c.valor)}\n                </div>\n                ${\n                  c.extra\n                    ? `<div style=\"font-size:11px; color:${CORES.textoSecundario}; margin-top:2px;\">${escapeHtml(c.extra)}</div>`\n                    : \"\"\n                }\n              </td>\n            </tr>\n          </table>\n        </td>\n      `\n      )\n      .join(\"\");\n\n    // Se sobrar célula ímpar, completa com célula vazia\n    const preencher = par.length === 1 ? `<td width=\"50%\" style=\"padding:6px;\">&nbsp;</td>` : \"\";\n\n    linhas += `<tr>${celulas}${preencher}</tr>`;\n  }\n\n  return `\n    <tr>\n      <td style=\"padding:24px 24px 8px; font-family:${FONTE};\">\n        <div style=\"font-size:16px; font-weight:bold; color:${CORES.textoPrimario}; margin-bottom:10px;\">\n          Indicadores Gerais\n        </div>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n          ${linhas}\n        </table>\n      </td>\n    </tr>\n  `;\n}\n\n/** Um bloco de ranking (lista com barras). Reaproveitado para todas as categorias. */\nfunction gerarBlocoRanking(titulo, lista) {\n  if (!lista || lista.length === 0) {\n    return `<div style=\"font-family:${FONTE}; font-size:13px; color:${CORES.textoSecundario}; font-style:italic;\">Sem dados.</div>`;\n  }\n\n  const maior = maiorQuantidade(lista);\n  const ordenado = [...lista].sort((a, b) => (b.quantidade || 0) - (a.quantidade || 0));\n\n  const linhas = ordenado\n    .map((item) => {\n      const percentual = ((item.quantidade || 0) / maior) * 100;\n      return `\n        <tr>\n          <td style=\"padding:6px 0; font-family:${FONTE};\">\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n              <tr>\n                <td style=\"font-size:12px; color:${CORES.textoPrimario}; text-transform:capitalize; padding-bottom:3px;\">\n                  ${escapeHtml(item.nome)}\n                  <span style=\"float:right; font-weight:bold; color:${CORES.primaria};\">${escapeHtml(item.quantidade)}</span>\n                </td>\n              </tr>\n              <tr>\n                <td>${gerarBarra(percentual, CORES.primaria, \"#eef0f5\", 7)}</td>\n              </tr>\n            </table>\n          </td>\n        </tr>\n      `;\n    })\n    .join(\"\");\n\n  return `\n    <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n      <tr><td style=\"font-family:${FONTE}; font-size:13px; font-weight:bold; color:${CORES.textoPrimario}; padding-bottom:8px;\">${escapeHtml(titulo)}</td></tr>\n      ${linhas}\n    </table>\n  `;\n}\n\n/** Seção com os 4 rankings, organizados em 2 colunas. */\nfunction gerarSecaoRankings() {\n  const blocos = [\n    gerarBlocoRanking(\"Por Funcionalidade\", rankings.funcionalidades),\n    gerarBlocoRanking(\"Por Criticidade\", rankings.criticidades),\n    gerarBlocoRanking(\"Por Regressão\", rankings.regressoes),\n    gerarBlocoRanking(\"Por Complexidade\", rankings.complexidades)\n  ];\n\n  let linhas = \"\";\n  for (let i = 0; i < blocos.length; i += 2) {\n    const par = blocos.slice(i, i + 2);\n    linhas += `\n      <tr>\n        <td width=\"50%\" valign=\"top\" style=\"padding:10px; background-color:${CORES.fundoCard}; border:1px solid ${CORES.borda}; border-radius:6px;\">\n          ${par[0]}\n        </td>\n        <td width=\"12\"></td>\n        <td width=\"50%\" valign=\"top\" style=\"padding:10px; background-color:${CORES.fundoCard}; border:1px solid ${CORES.borda}; border-radius:6px;\">\n          ${par[1] || \"&nbsp;\"}\n        </td>\n      </tr>\n      <tr><td colspan=\"3\" height=\"12\"></td></tr>\n    `;\n  }\n\n  return `\n    <tr>\n      <td style=\"padding:16px 24px 8px; font-family:${FONTE};\">\n        <div style=\"font-size:16px; font-weight:bold; color:${CORES.textoPrimario}; margin-bottom:10px;\">\n          Rankings\n        </div>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n          ${linhas}\n        </table>\n      </td>\n    </tr>\n  `;\n}\n\n/** Indicadores técnicos (percentual de uso de cada recurso). */\nfunction gerarIndicadoresTecnicos() {\n  const chaves = Object.keys(indicadores);\n  if (chaves.length === 0) return \"\";\n\n  const linhas = chaves\n    .sort((a, b) => (indicadores[b] || 0) - (indicadores[a] || 0))\n    .map((chave) => {\n      const percentual = indicadores[chave] ?? 0;\n      const qtd = recursos[chave] ?? \"-\";\n      const corBarra = percentual >= 80 ? CORES.verde : percentual >= 50 ? CORES.laranja : CORES.vermelho;\n\n      return `\n        <tr>\n          <td style=\"padding:8px 0; font-family:${FONTE};\">\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n              <tr>\n                <td style=\"font-size:12px; color:${CORES.textoPrimario}; text-transform:capitalize; padding-bottom:3px;\">\n                  ${escapeHtml(chave.replace(/_/g, \" \"))}\n                  <span style=\"float:right; color:${CORES.textoSecundario};\">\n                    <b style=\"color:${CORES.textoPrimario};\">${percentual}%</b> (${escapeHtml(qtd)} casos)\n                  </span>\n                </td>\n              </tr>\n              <tr>\n                <td>${gerarBarra(percentual, corBarra, \"#eef0f5\", 8)}</td>\n              </tr>\n            </table>\n          </td>\n        </tr>\n      `;\n    })\n    .join(\"\");\n\n  return `\n    <tr>\n      <td style=\"padding:16px 24px 8px; font-family:${FONTE};\">\n        <div style=\"font-size:16px; font-weight:bold; color:${CORES.textoPrimario}; margin-bottom:10px;\">\n          Indicadores Técnicos\n        </div>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n          style=\"background-color:${CORES.fundoCard}; border:1px solid ${CORES.borda}; border-radius:6px;\">\n          <tr><td style=\"padding:14px 16px;\">\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n              ${linhas}\n            </table>\n          </td></tr>\n        </table>\n      </td>\n    </tr>\n  `;\n}\n\n/** Insights executivos, em formato de lista destacada. */\nfunction gerarInsights() {\n  if (!insights || insights.length === 0) return \"\";\n\n  const linhas = insights\n    .map(\n      (texto) => `\n      <tr>\n        <td style=\"padding-bottom:8px;\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n            style=\"background-color:${CORES.fundoDestaque}; border-left:3px solid ${CORES.primaria}; border-radius:4px;\">\n            <tr>\n              <td style=\"padding:10px 14px; font-family:${FONTE}; font-size:13px; color:${CORES.textoPrimario};\">\n                ${escapeHtml(texto)}\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n    `\n    )\n    .join(\"\");\n\n  return `\n    <tr>\n      <td style=\"padding:16px 24px 8px; font-family:${FONTE};\">\n        <div style=\"font-size:16px; font-weight:bold; color:${CORES.textoPrimario}; margin-bottom:10px;\">\n          Insights Executivos\n        </div>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n          ${linhas}\n        </table>\n      </td>\n    </tr>\n  `;\n}\n\n/** Verificação de códigos de caso de teste duplicados. Ao contrário dos outros\n *  alertas (que somem quando não há problema), este SEMPRE aparece no\n *  relatório — como confirmação positiva quando está tudo certo, ou como\n *  tabela detalhada (uma linha por ocorrência) quando há duplicidade. */\nfunction gerarCodigosDuplicados() {\n  if (!codigos_duplicados || codigos_duplicados.length === 0) {\n    return `\n      <tr>\n        <td style=\"padding:16px 24px 8px; font-family:${FONTE};\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n            style=\"background-color:${CORES.verdeFundo}; border-left:3px solid ${CORES.verde}; border-radius:4px;\">\n            <tr>\n              <td style=\"padding:10px 14px; font-family:${FONTE}; font-size:13px; color:${CORES.textoPrimario};\">\n                &#9989; Nenhum código de caso de teste duplicado encontrado no repositório.\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n    `;\n  }\n\n  const linhas = codigos_duplicados\n    .map((dup) => {\n      const total = dup.ocorrencias.length;\n      return dup.ocorrencias\n        .map((ocorrencia, idx) => {\n          const bgLinha = idx % 2 === 0 ? \"#fffbfb\" : \"#fff5f5\";\n          const arquivoLinha = ocorrencia.linha ? `${ocorrencia.caminho}:${ocorrencia.linha}` : ocorrencia.caminho;\n\n          return `\n            <tr style=\"background-color:${bgLinha};\">\n              <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.vermelho}; font-weight:bold; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n                ${idx === 0 ? escapeHtml(dup.codigo) : \"\"}\n              </td>\n              <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoSecundario}; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n                Ocorrência ${idx + 1} de ${total}\n              </td>\n              <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoPrimario}; border-bottom:1px solid ${CORES.borda};\">\n                ${escapeHtml(arquivoLinha)}\n              </td>\n            </tr>\n          `;\n        })\n        .join(\"\");\n    })\n    .join(\"\");\n\n  return `\n    <tr>\n      <td style=\"padding:16px 24px 24px; font-family:${FONTE};\">\n        <div style=\"font-size:16px; font-weight:bold; color:${CORES.vermelho}; margin-bottom:6px;\">\n          &#9888; Códigos de Caso de Teste Duplicados (${codigos_duplicados.length})\n        </div>\n        <div style=\"font-size:12px; color:${CORES.textoSecundario}; margin-bottom:10px; line-height:1.5;\">\n          O mesmo código de caso de teste foi encontrado mais de uma vez no repositório (no mesmo arquivo ou em arquivos diferentes). Isso quebra a rastreabilidade do relatório — ajuste um dos casos para usar um código único.\n        </div>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n          style=\"background-color:${CORES.fundoCard}; border:1px solid ${CORES.vermelhoFundo}; border-radius:6px; overflow:hidden;\">\n          <tr style=\"background-color:${CORES.vermelhoFundo};\">\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Código</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Ocorrência</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Arquivo : Linha</th>\n          </tr>\n          ${linhas}\n        </table>\n      </td>\n    </tr>\n  `;\n}\n\n/** Tabela de alerta genérica para casos de teste com tag obrigatória ausente.\n *  Reaproveita o mesmo padrão visual de \"Casos Removidos do Repositório\"\n *  (card com cabeçalho colorido + tabela), só que na cor laranja (aviso),\n *  não vermelha (que já é usada para casos removidos). */\nfunction gerarTabelaAlertaTags(titulo, descricao, lista) {\n  if (!lista || lista.length === 0) return \"\";\n\n  const linhas = lista\n    .map((item, index) => {\n      const bgLinha = index % 2 === 0 ? \"#fffaf5\" : \"#fff6ec\";\n      const arquivoLinha = item.linha ? `${item.caminho}:${item.linha}` : item.caminho || \"-\";\n\n      return `\n        <tr style=\"background-color:${bgLinha};\">\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.primaria}; font-weight:bold; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${escapeHtml(item.codigo)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoPrimario}; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${escapeHtml(arquivoLinha)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoSecundario}; border-bottom:1px solid ${CORES.borda};\">\n            ${escapeHtml(item.linhaTags || \"-\")}\n          </td>\n        </tr>\n      `;\n    })\n    .join(\"\");\n\n  return `\n    <tr>\n      <td style=\"padding:16px 24px 24px; font-family:${FONTE};\">\n        <div style=\"font-size:16px; font-weight:bold; color:${CORES.laranja}; margin-bottom:6px;\">\n          &#9888; ${escapeHtml(titulo)} (${lista.length})\n        </div>\n        <div style=\"font-size:12px; color:${CORES.textoSecundario}; margin-bottom:10px; line-height:1.5;\">\n          ${descricao}\n        </div>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n          style=\"background-color:${CORES.fundoCard}; border:1px solid ${CORES.laranjaFundo}; border-radius:6px; overflow:hidden;\">\n          <tr style=\"background-color:${CORES.laranjaFundo};\">\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.laranja}; border-bottom:2px solid ${CORES.borda};\">Código</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.laranja}; border-bottom:2px solid ${CORES.borda};\">Arquivo : Linha</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.laranja}; border-bottom:2px solid ${CORES.borda};\">Linha [Tags]</th>\n          </tr>\n          ${linhas}\n        </table>\n      </td>\n    </tr>\n  `;\n}\n\n/** Casos do projeto sem nenhuma tag de criticidade (baixo/medio/alto/critico). */\nfunction gerarCasosSemCriticidade() {\n  return gerarTabelaAlertaTags(\n    \"Casos sem tag de criticidade\",\n    'Todo caso de teste precisa de uma tag de criticidade (<b>baixo</b>, <b>medio</b>, <b>alto</b> ou <b>critico</b>). Sem ela, o caso fica sem classificação nos indicadores e rankings do relatório.',\n    casos_sem_criticidade\n  );\n}\n\n/** Casos do projeto sem a tag \"regressivo-completo\". */\nfunction gerarCasosSemRegressivoCompleto() {\n  return gerarTabelaAlertaTags(\n    'Casos sem \"regressivo-completo\"',\n    'Todo caso de teste precisa da tag <b>regressivo-completo</b> (mesmo que também tenha <b>mini-regressivo</b>). Sem ela, o caso fica de fora de qualquer execução <code>--include regressivo-completo</code>.',\n    casos_sem_regressivo_completo\n  );\n}\n\n/**\n * NOVO: casos de teste do projeto inteiro com bug aberto referenciado no\n * [Documentation] (padrão \"[Bug]     DVAROMNIP-<numero>:  titulo da issue\").\n * Reaproveita o card visual de \"Códigos de Caso de Teste Duplicados\"\n * (cor vermelha), mas com ícone de inseto para diferenciar pendência de\n * correção de bug de pendência de rastreabilidade.\n */\nfunction gerarCasosComBug() {\n  if (!casos_com_bug || casos_com_bug.length === 0) return \"\";\n\n  const linhas = casos_com_bug\n    .map((item, index) => {\n      const bgLinha = index % 2 === 0 ? \"#fffbfb\" : \"#fff5f5\";\n      const arquivoLinha = item.linha ? `${item.caminho}:${item.linha}` : item.caminho || \"-\";\n\n      return `\n        <tr style=\"background-color:${bgLinha};\">\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.vermelho}; font-weight:bold; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${escapeHtml(item.codigo)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoPrimario}; font-weight:bold; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${escapeHtml(item.issue)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoPrimario}; border-bottom:1px solid ${CORES.borda};\">\n            ${escapeHtml(item.titulo_issue)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:10px; color:${CORES.textoSecundario}; border-bottom:1px solid ${CORES.borda};\">\n            ${escapeHtml(arquivoLinha)}\n          </td>\n        </tr>\n      `;\n    })\n    .join(\"\");\n\n  return `\n    <tr>\n      <td style=\"padding:16px 24px 24px; font-family:${FONTE};\">\n        <div style=\"font-size:16px; font-weight:bold; color:${CORES.vermelho}; margin-bottom:6px;\">\n          &#128027; Casos com Bug Aberto (${casos_com_bug.length})\n        </div>\n        <div style=\"font-size:12px; color:${CORES.textoSecundario}; margin-bottom:10px; line-height:1.5;\">\n          Casos de teste cujo [Documentation] referencia uma issue de bug (DVAROMNIP) ainda pendente de correção. Falhas nesses casos são esperadas até a issue ser resolvida.\n        </div>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n          style=\"background-color:${CORES.fundoCard}; border:1px solid ${CORES.vermelhoFundo}; border-radius:6px; overflow:hidden;\">\n          <tr style=\"background-color:${CORES.vermelhoFundo};\">\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Código</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Issue</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Título</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Arquivo : Linha</th>\n          </tr>\n          ${linhas}\n        </table>\n      </td>\n    </tr>\n  `;\n}\n\n/** Tabela completa de casos (versão resumida: colunas essenciais para leitura no e-mail). */\nfunction gerarTabelaCasos() {\n  if (!casos || casos.length === 0) return \"\";\n\n  const linhas = casos\n    .map((caso, index) => {\n      const bgLinha = index % 2 === 0 ? \"#ffffff\" : \"#fafbff\";\n      // Sem tag de criticidade = alerta (fundo cinza + texto vermelho, combinação\n      // que nenhum nível real de criticidade usa, para não ser confundida com\n      // \"crítico\" de verdade).\n      const critStyle = caso.criticidade\n        ? estiloCriticidade(caso.criticidade)\n        : { cor: CORES.vermelho, fundo: CORES.cinzaFundo };\n      const compStyle = estiloComplexidade(caso.complexidade);\n      const temRegressao = Array.isArray(caso.regressao) && caso.regressao.length > 0;\n      const temRegressivoCompleto = Array.isArray(caso.regressao) && caso.regressao.includes(\"regressivo-completo\");\n      const regressoes = temRegressao ? caso.regressao.join(\", \") : \"-\";\n\n      return `\n        <tr style=\"background-color:${bgLinha};\">\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.primaria}; font-weight:bold; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${escapeHtml(caso.codigo)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoPrimario}; border-bottom:1px solid ${CORES.borda};\">\n            ${escapeHtml(caso.descricao)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoPrimario}; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${escapeHtml(caso.funcionalidade)}\n          </td>\n          <td style=\"padding:8px 10px; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${gerarBadge(caso.criticidade || \"sem tag\", critStyle.cor, critStyle.fundo)}\n          </td>\n          <td style=\"padding:8px 10px; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${gerarBadge(caso.complexidade, compStyle.cor, compStyle.fundo)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoSecundario}; border-bottom:1px solid ${CORES.borda};\">\n            ${escapeHtml(regressoes)}\n            ${\n              !temRegressivoCompleto\n                ? `<br/><span style=\"color:${CORES.vermelho}; font-size:10px; font-weight:bold; white-space:nowrap;\">&#9888; sem \"regressivo-completo\"</span>`\n                : \"\"\n            }\n          </td>\n        </tr>\n      `;\n    })\n    .join(\"\");\n\n  return `\n    <tr>\n      <td style=\"padding:16px 24px 24px; font-family:${FONTE};\">\n        <div style=\"font-size:16px; font-weight:bold; color:${CORES.textoPrimario}; margin-bottom:10px;\">\n          Tabela Completa de Casos (${casos.length})\n        </div>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n          style=\"background-color:${CORES.fundoCard}; border:1px solid ${CORES.borda}; border-radius:6px; overflow:hidden;\">\n          <tr style=\"background-color:#f8f9fc;\">\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.textoSecundario}; border-bottom:2px solid ${CORES.borda};\">Código</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.textoSecundario}; border-bottom:2px solid ${CORES.borda};\">Descrição</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.textoSecundario}; border-bottom:2px solid ${CORES.borda};\">Funcionalidade</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.textoSecundario}; border-bottom:2px solid ${CORES.borda};\">Criticidade</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.textoSecundario}; border-bottom:2px solid ${CORES.borda};\">Complexidade</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.textoSecundario}; border-bottom:2px solid ${CORES.borda};\">Regressão</th>\n          </tr>\n          ${linhas}\n        </table>\n        <div style=\"font-family:${FONTE}; font-size:10px; color:${CORES.textoSecundario}; margin-top:6px;\">\n          * Coluna \"Caminho do Arquivo\" omitida nesta versão para melhor leitura no e-mail.\n        </div>\n      </td>\n    </tr>\n  `;\n}\n\n/** Tabela de casos removidos/obsoletos (existiam no início do período e não foram mais encontrados). */\nfunction gerarTabelaCasosRemovidos() {\n  if (!casos_removidos || casos_removidos.length === 0) return \"\";\n\n  const linhas = casos_removidos\n    .map((caso, index) => {\n      const bgLinha = index % 2 === 0 ? \"#fffbfb\" : \"#fff5f5\";\n\n      return `\n        <tr style=\"background-color:${bgLinha};\">\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.vermelho}; font-weight:bold; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${escapeHtml(caso.codigo)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoSecundario}; border-bottom:1px solid ${CORES.borda}; text-decoration:line-through;\">\n            ${escapeHtml(caso.descricao)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoPrimario}; border-bottom:1px solid ${CORES.borda}; white-space:nowrap;\">\n            ${escapeHtml(caso.funcionalidade)}\n          </td>\n          <td style=\"padding:8px 10px; font-family:${FONTE}; font-size:11px; color:${CORES.textoSecundario}; border-bottom:1px solid ${CORES.borda};\">\n            ${escapeHtml(caso.caminho_arquivo)}\n          </td>\n        </tr>\n      `;\n    })\n    .join(\"\");\n\n  return `\n    <tr>\n      <td style=\"padding:16px 24px 24px; font-family:${FONTE};\">\n        <div style=\"font-size:16px; font-weight:bold; color:${CORES.vermelho}; margin-bottom:10px;\">\n          &#9888; Casos Removidos do Repositório (${casos_removidos.length})\n        </div>\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n          style=\"background-color:${CORES.fundoCard}; border:1px solid ${CORES.vermelhoFundo}; border-radius:6px; overflow:hidden;\">\n          <tr style=\"background-color:${CORES.vermelhoFundo};\">\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Código</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Descrição</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Funcionalidade</th>\n            <th align=\"left\" style=\"padding:9px 10px; font-family:${FONTE}; font-size:10px; text-transform:uppercase; color:${CORES.vermelho}; border-bottom:2px solid ${CORES.borda};\">Arquivo</th>\n          </tr>\n          ${linhas}\n        </table>\n        <div style=\"font-family:${FONTE}; font-size:10px; color:${CORES.textoSecundario}; margin-top:6px;\">\n          * Casos que existiam no início do período e não foram mais encontrados no repositório (arquivo excluído ou trecho removido). Avalie se devem ser retirados formalmente do plano de testes.\n        </div>\n      </td>\n    </tr>\n  `;\n}\n\n/** Rodapé. */\nfunction gerarRodape() {\n  return `\n    <tr>\n      <td style=\"padding:16px 24px; background-color:#f8f9fc; border-radius:0 0 8px 8px; border-top:1px solid ${CORES.borda};\">\n        <div style=\"font-family:${FONTE}; font-size:11px; color:${CORES.textoSecundario}; text-align:center;\">\n          Relatório gerado &bull; Período: ${escapeHtml(formatarData(periodo_criacao_inicio))} até ${escapeHtml(formatarData(periodo_criacao_fim))}\n        </div>\n      </td>\n    </tr>\n  `;\n}\n\n// =====================================================================================\n// 5. MONTAGEM FINAL DO E-MAIL (tabela mestre centralizada, largura fixa)\n// =====================================================================================\nfunction montarEmailCompleto() {\n  return `\n<!DOCTYPE html>\n<html lang=\"pt-BR\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n  <title>Relatório de Casos de Teste</title>\n</head>\n<body style=\"margin:0; padding:0; background-color:${CORES.fundoPagina};\">\n  <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:${CORES.fundoPagina};\">\n    <tr>\n      <td align=\"center\" style=\"padding:24px 12px;\">\n        <table role=\"presentation\" width=\"${LARGURA_TOTAL}\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n          style=\"max-width:${LARGURA_TOTAL}px; width:100%; background-color:${CORES.fundoCard}; border-radius:8px; overflow:hidden;\">\n          ${gerarCabecalho()}\n          ${gerarCardsIndicadores()}\n          ${gerarTabelaPorSuite()}\n          ${gerarSecaoRankings()}\n          ${gerarIndicadoresTecnicos()}\n          ${gerarInsights()}\n          ${gerarCodigosDuplicados()}\n          ${gerarCasosSemCriticidade()}\n          ${gerarCasosSemRegressivoCompleto()}\n          ${gerarCasosComBug()}\n          ${gerarTabelaCasos()}\n          ${gerarTabelaCasosRemovidos()}\n          ${gerarRodape()}\n        </table>\n      </td>\n    </tr>\n  </table>\n</body>\n</html>\n  `.trim();\n}\n\n// =====================================================================================\n// 6. RETORNO PARA O N8N\n// =====================================================================================\nconst htmlFinal = montarEmailCompleto();\n\nreturn [\n  {\n    json: {\n      html: htmlFinal,\n      periodo_criacao_inicio,\n      periodo_criacao_fim,\n      total_casos: resumo.total_casos ?? casos.length,\n      total_casos_removidos: resumo.total_casos_removidos ?? casos_removidos.length\n    }\n  }\n];\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        26336,
+        384
+      ],
+      "id": "ba9ceca5-280b-46e8-ba6a-c6d70605c98b",
+      "name": "Gerar Relatório HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "// CORREÇÃO (relatório não saía em períodos sem casos novos):\n// Se nenhum commit do período alterar um arquivo .robot, algum nó no meio da\n// cadeia de diff (Buscar Alterações do Commit -> ... -> Identificar Novos\n// Casos de Teste) fica com 0 itens de entrada e o n8n, por padrão, pula a\n// execução desse nó — isso cascateia até \"Preparar Dados para Relatório\",\n// que nunca disparava (0 itens de entrada = nó pulado também).\n//\n// FIX: habilitei \"Always Output Data\" (aba Settings do nó) em \"Enriquecer\n// Caso de Teste\" — não em \"Classificar Casos de Teste\" como na primeira\n// tentativa. Motivo: \"Classificar Casos de Teste\" roda em modo \"Run Once for\n// Each Item\" (usa $input.item.json), e esse modo não lida bem com Always\n// Output Data quando não há NENHUM item real — o node tenta rodar por item\n// mesmo sem item nenhum e quebra. \"Enriquecer Caso de Teste\" roda em modo\n// \"Run Once for All Items\" (usa $input.all() num for-loop) — com 0 itens,\n// o loop simplesmente não executa e o código retorna [] normalmente, sem\n// erro; o Always Output Data então força a emissão de 1 item vazio {},\n// que flui tranquilamente pelo \"Classificar Casos de Teste\" (código\n// tolerante a bloco_teste=\"\") e chega aqui sem \"codigo\"/\"tipo_mudanca\".\n// O filtro abaixo descarta esse item vazio antes de processar — ele nunca é\n// contado como um caso novo/removido de verdade.\nconst todosOsItens = $input.all()\n    .map(i => i.json)\n    .filter(item => item && item.codigo && item.tipo_mudanca);\n\n// O nó \"Identificar Novos Casos de Teste\" agora manda dois tipos de item no\n// mesmo stream: tipo_mudanca = 'novo' ou 'removido'. Separamos aqui para que\n// os rankings/indicadores (funcionalidade, criticidade, complexidade, uso de\n// recursos) continuem refletindo apenas os casos novos do período, e não\n// misturem com os removidos.\n// Deduplica pelo código do caso: o mesmo código pode aparecer mais de uma vez\n// no stream do período (ex.: o mesmo arquivo foi tocado por dois commits\n// diferentes dentro da janela, ou o código foi reintroduzido em outro\n// arquivo). Sem isso, o caso entra duas vezes na tabela e infla indicadores/\n// rankings. Mantém a ocorrência mais recente (maior data_commit).\nfunction deduplicarPorCodigo(lista) {\n    const mapa = new Map();\n    let duplicados = 0;\n\n    for (const caso of lista) {\n        if (mapa.has(caso.codigo)) {\n            duplicados++;\n            const existente = mapa.get(caso.codigo);\n            const dataExistente = new Date(existente.data_commit || 0).getTime();\n            const dataAtual = new Date(caso.data_commit || 0).getTime();\n            if (dataAtual >= dataExistente) mapa.set(caso.codigo, caso);\n        } else {\n            mapa.set(caso.codigo, caso);\n        }\n    }\n\n    return { lista: [...mapa.values()], duplicados };\n}\n\nconst dedupCasos = deduplicarPorCodigo(todosOsItens.filter(c => c.tipo_mudanca !== 'removido'));\nconst dedupRemovidos = deduplicarPorCodigo(todosOsItens.filter(c => c.tipo_mudanca === 'removido'));\n\nconst casos = dedupCasos.lista;\nconst casos_removidos = dedupRemovidos.lista;\nconst duplicadosNoPeriodo = dedupCasos.duplicados + dedupRemovidos.duplicados;\n\nfunction contarPor(lista, campo){\n\n    const mapa = {};\n\n    for(const caso of lista){\n\n        const valor = caso[campo] || \"Não informado\";\n\n        mapa[valor] = (mapa[valor] || 0) + 1;\n\n    }\n\n    return Object.entries(mapa)\n        .sort((a,b)=>b[1]-a[1])\n        .map(([nome,quantidade])=>({\n            nome,\n            quantidade\n        }));\n}\n\nfunction contarRegressoes(lista){\n\n    const mapa = {};\n\n    for(const caso of lista){\n\n        for(const reg of (caso.regressao || [])){\n\n            mapa[reg] = (mapa[reg] || 0) + 1;\n\n        }\n\n    }\n\n    return Object.entries(mapa)\n        .sort((a,b)=>b[1]-a[1])\n        .map(([nome,quantidade])=>({\n            nome,\n            quantidade\n        }));\n\n}\n\nfunction percentual(valor,total){\n\n    if(total===0) return 0;\n\n    return Number(((valor/total)*100).toFixed(1));\n\n}\n\nconst total = casos.length;\nconst totalRemovidos = casos_removidos.length;\n\n// Total geral de casos de teste que o projeto possui hoje (todos os arquivos\n// .robot da pasta /tests), incluindo os novos casos deste período e já sem os\n// removidos (a contagem é feita ao vivo direto no repositório).\nconst totalGeral = $('Contar Total de Casos do Projeto').first().json.total_geral;\n\n// Contagem de casos de teste por suíte (arquivo .robot) e por pasta\n// (tests / tests_performance), calculada ao vivo no repositório. Usada\n// para a nova seção \"Casos de Teste por Suíte\" do relatório.\nconst porSuite = $('Contar Total de Casos do Projeto').first().json.por_suite || [];\nconst totalPorPasta = $('Contar Total de Casos do Projeto').first().json.total_por_pasta || [];\n\n// Auditoria de duplicidade e de tags obrigatórias, calculada ao vivo sobre\n// TODO o projeto pelo nó \"Contar Total de Casos do Projeto\" (não só os casos\n// novos deste período).\nconst codigosDuplicados = $('Contar Total de Casos do Projeto').first().json.codigos_duplicados || [];\nconst casosSemCriticidade = $('Contar Total de Casos do Projeto').first().json.casos_sem_criticidade || [];\nconst casosSemRegressivoCompleto = $('Contar Total de Casos do Projeto').first().json.casos_sem_regressivo_completo || [];\nconst casosComBug = $('Contar Total de Casos do Projeto').first().json.casos_com_bug || [];\n\nconst funcionalidades = contarPor(casos, \"funcionalidade\");\nconst criticidades = contarPor(casos, \"criticidade\");\nconst complexidades = contarPor(casos, \"complexidade\");\nconst regressoes = contarRegressoes(casos);\n\nconst recursos = {\n\n    json:0,\n    bd:0,\n    frete:0,\n    desconto:0,\n    popup:0,\n    cliente:0,\n    produto:0,\n    pagamento:0,\n    pre_venda:0,\n    embalagem:0,\n    entrega:0\n\n};\n\nfor(const caso of casos){\n\n    if(caso.usa_json) recursos.json++;\n\n    if(caso.usa_bd) recursos.bd++;\n\n    if(caso.usa_frete) recursos.frete++;\n\n    if(caso.usa_desconto) recursos.desconto++;\n\n    if(caso.usa_popup) recursos.popup++;\n\n    if(caso.usa_cliente) recursos.cliente++;\n\n    if(caso.usa_produto) recursos.produto++;\n\n    if(caso.usa_pagamento) recursos.pagamento++;\n\n    if(caso.usa_pre_venda) recursos.pre_venda++;\n\n    if(caso.usa_embalagem) recursos.embalagem++;\n\n    if(caso.usa_entrega) recursos.entrega++;\n\n}\n\nconst dashboard = {\n\n   periodo_criacao_inicio: $('definir periodo').first().json.data_inicio,\n    periodo_criacao_fim: $('definir periodo').first().json.data_fim,\n\n    resumo:{\n\n        total_casos:total,\n\n        total_casos_removidos:totalRemovidos,\n\n        total_geral_projeto:totalGeral,\n\n        principal_funcionalidade:funcionalidades[0]?.nome,\n\n        principal_funcionalidade_qtd:funcionalidades[0]?.quantidade,\n\n        principal_criticidade:criticidades[0]?.nome,\n\n        principal_complexidade:complexidades[0]?.nome,\n\n        principal_regressao:regressoes[0]?.nome,\n\n\n    },\n\n    rankings:{\n\n        funcionalidades,\n\n        criticidades,\n\n        complexidades,\n\n        regressoes\n\n    },\n\n    indicadores:{\n\n        json:percentual(recursos.json,total),\n\n        bd:percentual(recursos.bd,total),\n\n        frete:percentual(recursos.frete,total),\n\n        desconto:percentual(recursos.desconto,total),\n\n        popup:percentual(recursos.popup,total),\n\n        cliente:percentual(recursos.cliente,total),\n\n        produto:percentual(recursos.produto,total),\n\n        pagamento:percentual(recursos.pagamento,total),\n\n        pre_venda:percentual(recursos.pre_venda,total),\n\n        embalagem:percentual(recursos.embalagem,total),\n\n        entrega:percentual(recursos.entrega,total)\n\n    },\n\n    recursos,\n\n    casos,\n\n    casos_removidos,\n\n    por_suite: porSuite,\n\n    total_por_pasta: totalPorPasta,\n\n    casos_sem_criticidade: casosSemCriticidade,\n\n    casos_sem_regressivo_completo: casosSemRegressivoCompleto,\n\n    casos_com_bug: casosComBug,\n\n    codigos_duplicados: codigosDuplicados\n\n};\n\ndashboard.insights = [];\n\ndashboard.insights.push(`O projeto possui atualmente ${totalGeral} casos de teste no total, sendo ${total} novos neste período.`);\n\nif (totalRemovidos > 0) {\n\n    dashboard.insights.push(\n        `${totalRemovidos} caso(s) de teste deixaram de existir no repositório neste período (arquivo excluído ou trecho removido) e podem precisar ser retirados do plano de testes.`\n    );\n\n}\n\n// ===== Alertas de qualidade dos dados (duplicidade e tags obrigatórias) =====\n\nif (duplicadosNoPeriodo > 0) {\n    dashboard.insights.push(\n        `&#9888; ${duplicadosNoPeriodo} caso(s) novo(s)/removido(s) do período apareceram mais de uma vez na análise de commits (provavelmente o mesmo arquivo alterado em mais de um commit na janela) e foram consolidados em uma única entrada no relatório.`\n    );\n}\n\nif (codigosDuplicados.length > 0) {\n    const exemplos = codigosDuplicados.slice(0, 5).map((d) => d.codigo).join(\", \");\n    const resto = codigosDuplicados.length > 5 ? ` e mais ${codigosDuplicados.length - 5}` : \"\";\n    dashboard.insights.push(\n        `&#9888; ${codigosDuplicados.length} código(s) de caso de teste duplicado(s) no projeto (mesmo código usado mais de uma vez, no mesmo arquivo ou em arquivos diferentes): ${exemplos}${resto}. Isso quebra a rastreabilidade — vale conferir.`\n    );\n}\n\nif (casosSemCriticidade.length > 0) {\n    dashboard.insights.push(\n        `&#9888; ${casosSemCriticidade.length} caso(s) de teste no projeto sem tag de criticidade (baixo/medio/alto/critico) definida.`\n    );\n}\n\nif (casosSemRegressivoCompleto.length > 0) {\n    dashboard.insights.push(\n        `&#9888; ${casosSemRegressivoCompleto.length} caso(s) de teste no projeto sem a tag \"regressivo-completo\".`\n    );\n}\n\nif (casosComBug.length > 0) {\n    dashboard.insights.push(\n        `&#128027; ${casosComBug.length} caso(s) de teste no projeto com bug aberto referenciado (issue DVAROMNIP).`\n    );\n}\n\nif(funcionalidades.length){\n\n    dashboard.insights.push(\n        `A funcionalidade com maior crescimento foi \"${funcionalidades[0].nome}\" (${funcionalidades[0].quantidade} casos).`\n    );\n\n}\n\nif(criticidades.length){\n\n    dashboard.insights.push(\n        `${criticidades[0].quantidade} casos possuem criticidade \"${criticidades[0].nome}\".`\n    );\n\n}\n\nif(complexidades.length){\n\n    dashboard.insights.push(\n        `${complexidades[0].quantidade} casos possuem complexidade \"${complexidades[0].nome}\".`\n    );\n\n}\n\nif(regressoes.length){\n\n    dashboard.insights.push(\n        `${regressoes[0].quantidade} casos pertencem à regressão \"${regressoes[0].nome}\".`\n    );\n\n}\n\n\ndashboard.insights.push(\n    `${dashboard.indicadores.produto}% dos casos utilizam Produto.`\n);\n\ndashboard.insights.push(\n    `${dashboard.indicadores.bd}% dos casos realizam validação em Banco de Dados.`\n);\n\ndashboard.insights.push(\n    `${dashboard.indicadores.embalagem}% dos casos utilizam cenários de Embalagem.`\n);\n\nreturn [\n{\n    json:dashboard\n}\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        26112,
+        384
+      ],
+      "id": "5a95071c-4605-4a0a-8529-311c5490f468",
+      "name": "Preparar Dados para Relatório"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const caso = $input.item.json;\n\nconst bloco = caso.bloco_teste || \"\";\n\n// ===== Flags =====\ncaso.usa_json = /json/i.test(bloco);\n\ncaso.usa_bd =\n    /persistem no BD|tabelas de pré-venda|BD corretamente/i.test(bloco);\n\ncaso.usa_frete =\n    /frete/i.test(bloco);\n\ncaso.usa_desconto =\n    /desconto/i.test(bloco);\n\ncaso.usa_popup =\n    /pop-up|popup/i.test(bloco);\n\ncaso.usa_cliente =\n    /CPF do cliente|cliente/i.test(bloco);\n\ncaso.usa_produto =\n    /Informar o produto/i.test(bloco);\n\ncaso.usa_pagamento =\n    /pagamento|F1|total pago/i.test(bloco);\n\ncaso.usa_pre_venda =\n    /pré-venda|pre-venda/i.test(bloco);\n\ncaso.usa_embalagem =\n    /embalagem/i.test(bloco);\n\ncaso.usa_entrega =\n    /entrega|retira/i.test(bloco);\n\n// ===== Complexidade =====\n\nlet pontos = 0;\n\nif (caso.usa_json) pontos++;\nif (caso.usa_bd) pontos++;\nif (caso.usa_frete) pontos++;\nif (caso.usa_desconto) pontos++;\nif (caso.usa_popup) pontos++;\nif (caso.usa_cliente) pontos++;\nif (caso.usa_produto) pontos++;\nif (caso.usa_pagamento) pontos++;\nif (caso.usa_pre_venda) pontos++;\nif (caso.usa_embalagem) pontos++;\nif (caso.usa_entrega) pontos++;\n\nif (pontos <= 3)\n    caso.complexidade = \"Baixa\";\nelse if (pontos <= 6)\n    caso.complexidade = \"Média\";\nelse if (pontos <= 9)\n    caso.complexidade = \"Alta\";\nelse\n    caso.complexidade = \"Muito Alta\";\n\nreturn {\n    json: caso\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25888,
+        384
+      ],
+      "id": "bd0a4123-4829-49b3-900d-65e05bed103e",
+      "name": "Classificar Casos de Teste"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrai o bloco de texto do caso de teste (tags, funcionalidade, criticidade\n// etc). Antes isso só olhava para \"conteudo_atual\", o que não funciona para\n// casos removidos (que não existem mais na versão atual do arquivo). Agora usa\n// \"conteudo_referencia\": o conteúdo atual para casos novos, e o conteúdo\n// anterior (última versão em que o caso existiu) para casos removidos.\n\nconst resultado = [];\n\nfor (const item of $input.all()) {\n\n    const dados = item.json;\n\n    const codigo = dados.codigo;\n    const conteudo = dados.conteudo_referencia || \"\";\n\n    // Localiza o início do caso de teste\n    const inicio = conteudo.indexOf(`@${codigo}`);\n\n    if (inicio === -1) {\n\n        resultado.push({\n            json: {\n                ...dados,\n                erro: \"Caso não encontrado no conteúdo de referência.\"\n            }\n        });\n\n        continue;\n    }\n\n    // Conteúdo a partir do caso encontrado\n    const restante = conteudo.substring(inicio + 1);\n\n    // Procura o próximo caso\n    // CORREÇÃO: não exige mais um hífen logo após o código do próximo caso\n    // (mesmo motivo do ajuste em \"Contar Total de Casos do Projeto\" e em\n    // \"Identificar Novos Casos de Teste\").\n    const proximoCaso = restante.match(/\\n@GTPDV-T\\d+/);\n\n    let bloco;\n\n    if (proximoCaso) {\n\n        bloco = conteudo.substring(\n            inicio,\n            inicio + proximoCaso.index + 1\n        );\n\n    } else {\n\n        bloco = conteudo.substring(inicio);\n\n    }\n\n    // Extrair linha [Tags]\n    const tagsMatch = bloco.match(/\\[Tags\\](.*)/);\n\n    const tags = tagsMatch\n        ? tagsMatch[1]\n            .trim()\n            .split(/\\s{2,}|\\t+/)\n            .filter(Boolean)\n        : [];\n\n    // Funcionalidade\n    const funcionalidade =\n        tags.find(t =>\n            !t.startsWith(\"GTPDV-\") &&\n            ![\"critico\",\"alto\",\"medio\",\"baixo\",\"regressivo-completo\",\"mini-regressivo\"].includes(t)\n        ) || null;\n\n    // Criticidade\n    const criticidade =\n        tags.find(t =>\n            [\"critico\",\"alto\",\"medio\",\"baixo\"].includes(t)\n        ) || null;\n\n    // Tipos de regressão\n    const regressao = tags.filter(t =>\n        [\"regressivo-completo\",\"mini-regressivo\"].includes(t)\n    );\n\n    resultado.push({\n\n        json: {\n\n            tipo_mudanca: dados.tipo_mudanca,\n\n            codigo: dados.codigo,\n\n            descricao: dados.descricao,\n\n            caminho_arquivo: dados.caminho_arquivo,\n\n            changeType: dados.changeType,\n\n            commitId_atual: dados.commitId_atual,\n\n            commitId_anterior: dados.commitId_anterior,\n\n            data_commit: dados.data_commit,\n\n            autor: dados.autor,\n\n            comentario_commit: dados.comentario_commit,\n\n            funcionalidade,\n\n            criticidade,\n\n            regressao,\n\n            tags,\n\n            bloco_teste: bloco\n\n        }\n\n    });\n\n}\n\nreturn resultado;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25664,
+        384
+      ],
+      "id": "0fb6ed2e-5043-4f4a-8c11-66060a6a14da",
+      "name": "Enriquecer Caso de Teste",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const itens = $input.all();\nconst arquivos = [];\n\nfor (const item of itens) {\n    const dados = item.json;\n\n    const alteracoes = dados.changes || [];\n\n    for (const alteracao of alteracoes) {\n        const arquivo = alteracao.item;\n\n        if (!arquivo) {\n            continue;\n        }\n\n        const caminho = arquivo.path || '';\n        const tipoArquivo = arquivo.gitObjectType || '';\n        const tipoAlteracao = (alteracao.changeType || '').toLowerCase();\n\n        const ehCaminhoDeTeste =\n            caminho.toLowerCase().startsWith('/tests/') &&\n            caminho.toLowerCase().endsWith('.robot');\n\n        // Arquivos editados/adicionados: exigimos gitObjectType 'blob' (como antes).\n        // Arquivos excluídos: o Azure DevOps nem sempre retorna gitObjectType para\n        // itens deletados, então não exigimos essa checagem nesse caso — senão\n        // exclusões de suítes inteiras passariam despercebidas pelo fluxo.\n        const ehArquivoDeTeste =\n            ehCaminhoDeTeste &&\n            (\n                (['edit', 'add'].includes(tipoAlteracao) && tipoArquivo === 'blob') ||\n                tipoAlteracao === 'delete'\n            );\n\n        if (ehArquivoDeTeste) {\n            arquivos.push({\n                json: {\n                    commitId: dados.commitId,\n                    caminho_arquivo: caminho,\n                    objectId_atual: arquivo.objectId,\n                    changeType: tipoAlteracao,\n\n                    data_commit: dados.data_commit,\n                    autor: dados.autor,\n                    comentario_commit: dados.comment\n                }\n            });\n        }\n    }\n}\n\nreturn arquivos;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24096,
+        384
+      ],
+      "id": "38ae78d9-f1ab-41e9-96ee-351ae6aa3610",
+      "name": "Extrair Arquivos Alterados",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.filter(item => {\n  const comentario = item.json.comment || '';\n\n  // Descarta commits de Merge do Azure DevOps\n  return !comentario.startsWith('Merged PR');\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23424,
+        384
+      ],
+      "id": "4fe4e6e7-b8d1-4e56-936a-9e2d3b5c491d",
+      "name": "Filtrar Commits Reais"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Identifica tanto casos NOVOS (existem agora, não existiam na versão anterior\n// do arquivo) quanto casos REMOVIDOS (existiam antes, não existem mais agora).\n//\n// A comparação é feita pelo código do caso (ex: GTPDV-T28512), que é estável\n// mesmo que o nome da suíte/arquivo mude — por isso o resultado não depende do\n// nome do arquivo permanecer igual ao longo do tempo.\n//\n// Cobre os 3 cenários possíveis de um arquivo alterado no período:\n//   - Arquivo novo (changeType=add): conteudo_anterior = \"\" -> todos os casos\n//     do arquivo aparecem como \"novo\".\n//   - Arquivo excluído (changeType=delete): conteudo_atual = \"\" -> todos os\n//     casos que existiam no arquivo aparecem como \"removido\".\n//   - Arquivo editado (changeType=edit): comparação normal, caso a caso.\n\nconst itens = $input.all();\n\nconst resultado = [];\n\n// CORREÇÃO: o hífen logo após o código passou a ser OPCIONAL. Alguns\n// casos são nomeados como \"GTPDV-T12345 Descrição - Subdescrição\" (sem\n// hífen logo após o código), e com o hífen obrigatório esses casos nunca\n// eram reconhecidos como novos/removidos.\nfunction extrairCasos(conteudo) {\n    const encontrados = [\n        ...conteudo.matchAll(/^@?(GTPDV-T\\d+)\\s*-?\\s*(.+)$/gm)\n    ];\n\n    const mapa = new Map();\n\n    for (const match of encontrados) {\n        mapa.set(match[1], match[2].trim());\n    }\n\n    return mapa;\n}\n\nfor (const item of itens) {\n\n    const dados = item.json;\n\n    const conteudoAnterior = dados.conteudo_anterior || '';\n    const conteudoAtual = dados.conteudo_atual || '';\n\n    const casosAnteriores = extrairCasos(conteudoAnterior);\n    const casosAtuais = extrairCasos(conteudoAtual);\n\n    const metadadosComuns = {\n        caminho_arquivo: dados.caminho_arquivo,\n        changeType: dados.changeType,\n        commitId_atual: dados.commitId_atual,\n        commitId_anterior: dados.commitId_anterior,\n        data_commit: dados.data_commit,\n        autor: dados.autor,\n        comentario_commit: dados.comentario_commit\n    };\n\n    // ----- Casos novos: existem agora, não existiam antes -----\n    for (const [codigo, descricao] of casosAtuais) {\n\n        if (!casosAnteriores.has(codigo)) {\n\n            resultado.push({\n                json: {\n                    tipo_mudanca: 'novo',\n                    codigo,\n                    descricao,\n                    ...metadadosComuns,\n                    conteudo_referencia: conteudoAtual\n                }\n            });\n\n        }\n\n    }\n\n    // ----- Casos removidos: existiam antes, não existem mais agora -----\n    for (const [codigo, descricao] of casosAnteriores) {\n\n        if (!casosAtuais.has(codigo)) {\n\n            resultado.push({\n                json: {\n                    tipo_mudanca: 'removido',\n                    codigo,\n                    descricao,\n                    ...metadadosComuns,\n                    conteudo_referencia: conteudoAnterior\n                }\n            });\n\n        }\n\n    }\n\n}\n\nreturn resultado;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25440,
+        384
+      ],
+      "id": "d31d58f1-33c4-47a5-9513-415b50e93a67",
+      "name": "Identificar Novos Casos de Teste",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Este nó não confia mais nos campos devolvidos pelas chamadas HTTP de\n// \"Buscar Conteúdo Atual/Anterior do Arquivo\" para identificar o arquivo/commit\n// (ex: .path, .commitId), porque quando o arquivo é novo (sem versão anterior)\n// ou foi excluído (sem versão atual), essas chamadas retornam erro 404 e não\n// trazem esses campos. Em vez disso, a identificação vem sempre de\n// \"Extrair Commit Pai\", que é 100% confiável.\n//\n// As chamadas HTTP têm \"On Error: Continue\" configurado, então mesmo em caso de\n// 404 o fluxo não é interrompido — o conteúdo simplesmente vem vazio, e é assim\n// que sabemos que o arquivo é novo (sem conteúdo anterior) ou foi excluído\n// (sem conteúdo atual).\n\nconst metadados = $('Extrair Commit Pai').all();\nconst anteriores = $input.all();\nconst atuais = $('Buscar Conteúdo Atual do Arquivo').all();\n\nreturn metadados.map((item, index) => {\n    const meta = item.json;\n    const anterior = anteriores[index]?.json || {};\n    const atual = atuais[index]?.json || {};\n\n    return {\n        json: {\n            caminho_arquivo: meta.caminho_arquivo,\n            changeType: meta.changeType,\n\n            commitId_atual: meta.commitId_atual,\n            commitId_anterior: meta.commitId_anterior,\n\n            data_commit: meta.data_commit,\n            autor: meta.autor,\n            comentario_commit: meta.comentario_commit,\n\n            // Se a busca falhou (arquivo não existia nessa versão), .content\n            // vem undefined e cai no fallback de string vazia.\n            conteudo_anterior: anterior.content || '',\n            conteudo_atual: atual.content || ''\n        }\n    };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        25216,
+        384
+      ],
+      "id": "ae2f64a5-d6da-4b5c-a5fa-5c48dc826b3d",
+      "name": "Combinar Conteúdo Atual + Anterior"
+    },
+    {
+      "parameters": {
+        "jsCode": "const commits = $input.all();\n\nconst arquivos = $('Extrair Arquivos Alterados').all();\n\nreturn commits.map((item, index) => {\n    const commit = item.json;\n    const arquivo = arquivos[index]?.json || {};\n\n    return {\n        json: {\n            commitId_atual: commit.commitId,\n            commitId_anterior: commit.parents?.[0] || null,\n\n            caminho_arquivo: arquivo.caminho_arquivo,\n            changeType: arquivo.changeType,\n            objectId_atual: arquivo.objectId_atual,\n            objectId_anterior: arquivo.objectId_anterior,\n\n            data_commit: arquivo.data_commit,\n            autor: arquivo.autor,\n            comentario_commit: arquivo.comentario_commit\n        }\n    };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24768,
+        384
+      ],
+      "id": "9a365955-78d9-4c4b-a2ac-9738afcb88d5",
+      "name": "Extrair Commit Pai"
+    },
+    {
+      "parameters": {
+        "url": "=https://dev.azure.com/totvstfs/Solucoes-Varejo/_apis/git/repositories/Omni-TAUT-Pedidos/commits/{{ $json.commitId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api-version",
+              "value": "7.1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        24544,
+        384
+      ],
+      "id": "951bb8ec-ca1b-4af0-9a28-ab1e0c489386",
+      "name": "Buscar Commit Pai",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uoJACCih8DiEJ69p",
+          "name": "azure totvs"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://dev.azure.com/totvstfs/Solucoes-Varejo/_apis/git/repositories/Omni-TAUT-Pedidos/items/{{ $json.caminho_arquivo }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "versionDescriptor.version",
+              "value": "={{ $json.commitId_anterior }}"
+            },
+            {
+              "name": "versionDescriptor.versionType",
+              "value": "commit"
+            },
+            {
+              "name": "includeContent",
+              "value": "true"
+            },
+            {
+              "name": "api-version",
+              "value": "7.1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        24992,
+        384
+      ],
+      "id": "c1d96366-e604-4fdf-ae58-716358ce1915",
+      "name": "Buscar Conteúdo Anterior do Arquivo",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uoJACCih8DiEJ69p",
+          "name": "azure totvs"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://dev.azure.com/totvstfs/Solucoes-Varejo/_apis/git/repositories/Omni-TAUT-Pedidos/items/{{ $json.caminho_arquivo }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "versionDescriptor.version",
+              "value": "={{ $json.commitId }}"
+            },
+            {
+              "name": "versionDescriptor.versionType",
+              "value": "commit"
+            },
+            {
+              "name": "includeContent",
+              "value": "true"
+            },
+            {
+              "name": "api-version",
+              "value": "7.1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        24320,
+        384
+      ],
+      "id": "5e7112e3-5a7d-4b36-a9b3-ce48aa1ef705",
+      "name": "Buscar Conteúdo Atual do Arquivo",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uoJACCih8DiEJ69p",
+          "name": "azure totvs"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        23872,
+        384
+      ],
+      "id": "11342586-c001-4cf8-aed3-ea9c0ff2c75c",
+      "name": "Combinar Commit + Alterações"
+    },
+    {
+      "parameters": {
+        "jsCode": "const resposta = $input.first().json;\n\nconst commits = resposta.value || [];\n\n// CORREÇÃO (relatório não saía quando não há commits no período):\n// \"Separar Commits\" é o único nó desta cadeia que SEMPRE executa de verdade\n// (alimentado por \"Buscar Commits do Período\", que sempre entrega 1 item —\n// a resposta da API, mesmo que \"value\" venha vazio). Se não emitirmos nada\n// aqui quando commits.length===0, o próximo nó (\"Filtrar Commits Reais\")\n// recebe 0 itens e o n8n pula a execução dele — e isso cascateia por toda a\n// cadeia de diff, incluindo nós que fazem chamada HTTP real.\n//\n// Em vez disso, emitimos 1 item sentinela (comment que não bate com \"Merged\n// PR\", então passa pelo filtro seguinte normalmente). Os nós seguintes já\n// são tolerantes a campos ausentes (fallbacks \"|| ''\"/\"|| []\"/\"?.\") e as\n// chamadas HTTP dependentes de commitId têm \"On Error: Continue\" — o\n// sentinela flui até \"Identificar Novos Casos de Teste\", que naturalmente\n// não encontra nenhum caso em conteúdo vazio e retorna [] normalmente (sem\n// erro). Dali em diante, quem garante que \"Preparar Dados para Relatório\"\n// ainda assim dispare é o Always Output Data em \"Enriquecer Caso de Teste\".\nif (commits.length === 0) {\n    return [{\n        json: {\n            commitId: null,\n            comment: '[SEM COMMITS NO PERÍODO]',\n            autor: null,\n            data_commit: null\n        }\n    }];\n}\n\nreturn commits.map(commit => ({\n  json: {\n    commitId: commit.commitId,\n    comment: commit.comment,\n    autor: commit.author?.name || null,\n    data_commit: commit.committer?.date || null\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23200,
+        384
+      ],
+      "id": "942d5a54-b0a2-4243-a6dd-59a876959747",
+      "name": "Separar Commits"
+    },
+    {
+      "parameters": {
+        "url": "=https://dev.azure.com/totvstfs/Solucoes-Varejo/_apis/git/repositories/Omni-TAUT-Pedidos/commits/{{ $json.commitId }}/changes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api-version",
+              "value": "7.1"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        23648,
+        464
+      ],
+      "id": "7293d31e-a072-4a2f-8acc-6f03f88f125a",
+      "name": "Buscar Alterações do Commit",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uoJACCih8DiEJ69p",
+          "name": "azure totvs"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://dev.azure.com/totvstfs/Solucoes-Varejo/_apis/git/repositories/Omni-TAUT-Pedidos/commits",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "searchCriteria.fromDate",
+              "value": "={{ $json.data_inicio }}"
+            },
+            {
+              "name": "searchCriteria.toDate",
+              "value": "={{ $json.data_fim }}"
+            },
+            {
+              "name": "$top",
+              "value": "1000"
+            },
+            {
+              "name": "api-version",
+              "value": "7.1"
+            },
+            {
+              "name": "searchCriteria.itemVersion.version",
+              "value": "develop"
+            },
+            {
+              "name": "searchCriteria.itemVersion.versionType",
+              "value": "branch"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        22976,
+        384
+      ],
+      "id": "4636f3b4-0427-4276-a1bb-9173a2232123",
+      "name": "Buscar Commits do Período",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uoJACCih8DiEJ69p",
+          "name": "azure totvs"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        22176,
+        288
+      ],
+      "id": "26b42296-9306-42b5-b228-6b9d34f8e03f",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const diasAtras = 30;\n\nconst agora = new Date();\n\n// Data inicial: início do dia de X dias atrás\nconst dataInicio = new Date(agora);\ndataInicio.setDate(dataInicio.getDate() - diasAtras);\ndataInicio.setHours(0, 0, 0, 0);\n\n// Data final: momento atual\nconst dataFim = new Date(agora);\n\nreturn [\n  {\n    json: {\n      dias_atras: diasAtras,\n      data_inicio: dataInicio.toISOString(),\n      data_fim: dataFim.toISOString(),\n      descricao_periodo: `Desde ${diasAtras} dias atrás até agora`\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        22464,
+        336
+      ],
+      "id": "4bf2c4da-7350-4ccc-bac4-c7b7f3d3c2a5",
+      "name": "definir periodo"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Enviar Email de Aprovação": {
+      "main": [
+        [
+          {
+            "node": "Verificar Aprovação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Pastas de Teste": {
+      "main": [
+        [
+          {
+            "node": "Listar Arquivos de Teste",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixar Conteúdo dos Arquivos de Teste": {
+      "main": [
+        [
+          {
+            "node": "Contar Total de Casos do Projeto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Arquivos Robot": {
+      "main": [
+        [
+          {
+            "node": "Baixar Conteúdo dos Arquivos de Teste",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Arquivos de Teste": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Arquivos Robot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Aprovação": {
+      "main": [
+        [
+          {
+            "node": "Enviar email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Relatório HTML": {
+      "main": [
+        [
+          {
+            "node": "Enviar Email de Aprovação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Dados para Relatório": {
+      "main": [
+        [
+          {
+            "node": "Gerar Relatório HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classificar Casos de Teste": {
+      "main": [
+        [
+          {
+            "node": "Preparar Dados para Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enriquecer Caso de Teste": {
+      "main": [
+        [
+          {
+            "node": "Classificar Casos de Teste",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Arquivos Alterados": {
+      "main": [
+        [
+          {
+            "node": "Buscar Conteúdo Atual do Arquivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Commits Reais": {
+      "main": [
+        [
+          {
+            "node": "Combinar Commit + Alterações",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Buscar Alterações do Commit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar Novos Casos de Teste": {
+      "main": [
+        [
+          {
+            "node": "Enriquecer Caso de Teste",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combinar Conteúdo Atual + Anterior": {
+      "main": [
+        [
+          {
+            "node": "Identificar Novos Casos de Teste",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Commit Pai": {
+      "main": [
+        [
+          {
+            "node": "Buscar Conteúdo Anterior do Arquivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Commit Pai": {
+      "main": [
+        [
+          {
+            "node": "Extrair Commit Pai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Conteúdo Anterior do Arquivo": {
+      "main": [
+        [
+          {
+            "node": "Combinar Conteúdo Atual + Anterior",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Conteúdo Atual do Arquivo": {
+      "main": [
+        [
+          {
+            "node": "Buscar Commit Pai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combinar Commit + Alterações": {
+      "main": [
+        [
+          {
+            "node": "Extrair Arquivos Alterados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar Commits": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Commits Reais",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Alterações do Commit": {
+      "main": [
+        [
+          {
+            "node": "Combinar Commit + Alterações",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Buscar Commits do Período": {
+      "main": [
+        [
+          {
+            "node": "Separar Commits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Definir Pastas de Teste",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "definir periodo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "definir periodo": {
+      "main": [
+        [
+          {
+            "node": "Buscar Commits do Período",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "6b8f2d27-c412-4134-97b0-87caa19369f9",
+  "meta": {
+    "instanceId": "6ce26c63596f0cc4323563c529acfca0cccb0e57f6533d79a60a42c9ff862ae7"
+  },
+  "nodeGroups": [],
+  "id": "W5FfaPSRSZoEPFFL",
+  "tags": []
+}
