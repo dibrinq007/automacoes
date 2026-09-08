@@ -1,0 +1,1394 @@
+{
+  "name": "Pipeline de Análise com IA",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "sender": "henrique.n8n.7@gmail.com"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -16,
+        256
+      ],
+      "id": "09854b5e-0276-428a-b999-fede9de4c786",
+      "name": "EmailRecebido",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DFXfh78q5tu9uc8q",
+          "name": "Gmail - Mercattone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "36e6f068-cdf0-4a45-96e4-15cdee13597f",
+              "name": "nome",
+              "value": "={{ $json.from.value[0].name }}",
+              "type": "string"
+            },
+            {
+              "id": "514318ae-eab9-4933-bcbb-e0e81c824f91",
+              "name": "email",
+              "value": "={{ $json.from.value[0].address }}",
+              "type": "string"
+            },
+            {
+              "id": "7dd4cbed-8808-4aef-95bc-fb8c20a716be",
+              "name": "assunto",
+              "value": "={{ $json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "65ea1581-1ade-4a05-aa1b-c980bd1854c8",
+              "name": "texto",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        256
+      ],
+      "id": "ad0410a2-4993-40e4-8a54-5dea200d5037",
+      "name": "Dados"
+    },
+    {
+      "parameters": {
+        "text": "=Assunto: {{ $json.assunto }}\nCliente: {{ $json.nome }} - {{ $json.email }}\n\nCorpo do Email:\n{{ $json.texto }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "nome_cliente",
+              "description": "Nome do cliente."
+            },
+            {
+              "name": "item_mencionado",
+              "description": "=Produto ou serviço mencionado no email, se não encontrar, use \"Não especificado\"."
+            },
+            {
+              "name": "ponto_principal",
+              "description": "Principal problema, objetivo, reclamação, sugestão ou elogio da mensagem. Em uma frase objetiva."
+            },
+            {
+              "name": "urgente",
+              "type": "boolean",
+              "description": "Indica se é uma mensagem urgente ou não. Só a classifique como urgente se for algo muito grave!!!",
+              "required": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        432,
+        256
+      ],
+      "id": "e954ba37-7d2e-4337-8c02-7876c27848ee",
+      "name": "ExtrairDados"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3.5-flash",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        432,
+        640
+      ],
+      "id": "9c9fbb1b-8e11-4f85-bd9e-38262701abd9",
+      "name": "Gemini-3.5-Flash",
+      "credentials": {
+        "openRouterApi": {
+          "id": "gR1XTpxsL5gxzlhP",
+          "name": "OpenRouter - Pessoal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "32133af5-3b88-4e61-9516-8835739eda5f",
+              "leftValue": "={{ $json.output.urgente }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        800,
+        256
+      ],
+      "id": "11e69059-ba3d-44bd-8d97-ccf21dba1bf4",
+      "name": "Urgente?"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "U06S133CL86",
+          "mode": "list",
+          "cachedResultName": "henriqueabreulobo"
+        },
+        "text": "=🚨*FEEDBACK URGENTE RECEBIDO*🚨\n\nCliente: {{ $json.output.nome_cliente }}\nItem Mencionado: {{ $json.output.item_mencionado }}\n\nPonto Principal:\n{{ $json.output.ponto_principal }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1072,
+        240
+      ],
+      "id": "b9f4bd93-506d-482a-81e1-e9cd0c8cd723",
+      "name": "EnviarUrgencia",
+      "webhookId": "e1193011-da01-4cb6-9087-beddad014d90",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "XJKSggpahOHt88WE",
+          "name": "Slack - Mercatto"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $('Dados').item.json.texto }}",
+        "options": {
+          "categories": "Positivo, Neutro, Negativo",
+          "includeDetailedResults": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.sentimentAnalysis",
+      "typeVersion": 1.1,
+      "position": [
+        1328,
+        256
+      ],
+      "id": "2c47bca5-19cd-4cf9-b099-e2ad6704994a",
+      "name": "AnalisarSentimento"
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $('Dados').item.json.texto }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Bug",
+              "description": "Problemas técnicos. Quando o cliente relata alguma falha no produto, como botões, timers etc. com defeito."
+            },
+            {
+              "category": "Reclamação",
+              "description": "Insatisfação geral. Quando o cliente solicita reembolso ou demonstra estar insatisfeito com o produto."
+            },
+            {
+              "category": "Sugestão",
+              "description": "Ideias de melhorias."
+            },
+            {
+              "category": "Elogio",
+              "description": "Feedback positivo."
+            }
+          ]
+        },
+        "options": {
+          "fallback": "other"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        1792,
+        224
+      ],
+      "id": "7d44d6c1-985f-4c34-94e1-72d05c07137c",
+      "name": "CategorizarFeedbacks"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B8PGCCNQL",
+          "mode": "list",
+          "cachedResultName": "fb-bugs"
+        },
+        "text": "=🐛 *Novo Bug Reportado*\n\n*Cliente:* {{ $('ExtrairDados').item.json.output.nome_cliente }}\n*Produto:* {{ $('ExtrairDados').item.json.output.item_mencionado }}\n\n*Problema:*\n{{ $('ExtrairDados').item.json.output.ponto_principal }}\n\nAlguém consegue investigar?",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2752,
+        -112
+      ],
+      "id": "7beba0bb-e522-445d-ad0c-3190a02e78d7",
+      "name": "EnviarBug",
+      "webhookId": "9626099c-d17b-4421-b1fa-34a6f342f18e",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "XJKSggpahOHt88WE",
+          "name": "Slack - Mercatto"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a41cab03-01bf-4b53-a76f-0734e324850c",
+              "name": "categoria",
+              "value": "bug",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2976,
+        -112
+      ],
+      "id": "167bf7cd-f598-4fc7-a547-62638a308f65",
+      "name": "CategoriaBug"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B8DGQGFNX",
+          "mode": "list",
+          "cachedResultName": "fb-reclamacoes"
+        },
+        "text": "=⚠️ *Nova Reclamação!*\n\n*Cliente:* {{ $('ExtrairDados').item.json.output.nome_cliente }}\n*Produto:* {{ $('ExtrairDados').item.json.output.item_mencionado }}\n\n*Resumo da Reclamação:*\n{{ $('ExtrairDados').item.json.output.ponto_principal }}\n\nResponsável pelo cliente, por favor dê uma olhada! ",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2528,
+        80
+      ],
+      "id": "2f204416-8882-4461-9b40-4b3ca0ce8329",
+      "name": "EnviarReclamacao",
+      "webhookId": "9626099c-d17b-4421-b1fa-34a6f342f18e",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "XJKSggpahOHt88WE",
+          "name": "Slack - Mercatto"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a41cab03-01bf-4b53-a76f-0734e324850c",
+              "name": "categoria",
+              "value": "reclamacao",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2976,
+        80
+      ],
+      "id": "b4a3241b-dffb-40c9-87c5-1e87b2a78af0",
+      "name": "CategoriaReclamacao"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('EmailRecebido').item.json.id }}",
+        "message": "=<p>Olá {{ $('ExtrairDados').item.json.output.nome_cliente }},</p>\n\n<p>Recebemos seu feedback sobre <b>{{ $('ExtrairDados').item.json.output.item_mencionado }}</b> e queremos te dizer: lemos com atenção.</p>\n\n<p>Em até 24h, alguém do time retorna pessoalmente.</p>\n\n<p>Atenciosamente,<br>Equipe Mercatto</p>",
+        "options": {
+          "senderName": "Equipe Mercatto"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2752,
+        80
+      ],
+      "id": "698620e0-35c5-451e-98a9-18b164e5db44",
+      "name": "ResponderAutomaticamente",
+      "webhookId": "9ecf748c-288f-4fbd-93f5-d51f5e241edd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DFXfh78q5tu9uc8q",
+          "name": "Gmail - Mercattone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B9E6VS5B2",
+          "mode": "list",
+          "cachedResultName": "fb-sugestoes"
+        },
+        "text": "=💡 *Nova Sugestão de um Cliente*\n\n*Cliente:* {{ $('ExtrairDados').item.json.output.nome_cliente }}\n*Sobre:* {{ $('ExtrairDados').item.json.output.item_mencionado }}\n\n*Sugestão:*\n{{ $('ExtrairDados').item.json.output.ponto_principal }}\n\nPara discutirmos posteriormente!",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2752,
+        272
+      ],
+      "id": "82354894-ca30-4835-973b-43de947bd39e",
+      "name": "EnviarSugestao",
+      "webhookId": "9626099c-d17b-4421-b1fa-34a6f342f18e",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "XJKSggpahOHt88WE",
+          "name": "Slack - Mercatto"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a41cab03-01bf-4b53-a76f-0734e324850c",
+              "name": "categoria",
+              "value": "sugestao",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2976,
+        272
+      ],
+      "id": "d74f083e-1f5c-4981-bd36-27168cdfca1b",
+      "name": "CategoriaSugestao"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('EmailRecebido').item.json.id }}",
+        "message": "=<p>Olá, {{ $('ExtrairDados').item.json.output.nome_cliente }}!</p>\n\n<p>Que alegria ler seu feedback sobre <b>{{ $('ExtrairDados').item.json.output.item_mencionado }}</b> 🙌</p>\n\n<p>Adoraríamos usar seu comentário como depoimento. Você nos autoriza?</p>\n\n<p>É só responder \"Sim\" ou \"Não\".</p>\n\n<p>Obrigado,<br>Equipe Mercatto</p>",
+        "options": {
+          "senderName": "Equipe Mercatto"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2752,
+        464
+      ],
+      "id": "2c434268-b692-417e-887d-71da963c8bd9",
+      "name": "ResponderAutomaticamente1",
+      "webhookId": "9ecf748c-288f-4fbd-93f5-d51f5e241edd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DFXfh78q5tu9uc8q",
+          "name": "Gmail - Mercattone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B8PGEL45S",
+          "mode": "list",
+          "cachedResultName": "fb-elogios"
+        },
+        "text": "=🎉 *Elogio Recebido!*\n\n*Cliente:* {{ $('ExtrairDados').item.json.output.nome_cliente }}\n*Produto ou Serviço:* {{ $('ExtrairDados').item.json.output.item_mencionado }}\n\n*Comentário:* {{ $('ExtrairDados').item.json.output.ponto_principal }}\n\nBora compartilhar com o time 🚀",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2528,
+        464
+      ],
+      "id": "93031187-699f-41aa-95b6-b166d5ab9b1c",
+      "name": "EnviarElogio",
+      "webhookId": "9626099c-d17b-4421-b1fa-34a6f342f18e",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "XJKSggpahOHt88WE",
+          "name": "Slack - Mercatto"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a41cab03-01bf-4b53-a76f-0734e324850c",
+              "name": "categoria",
+              "value": "elogio",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2976,
+        464
+      ],
+      "id": "38edb617-d146-4743-9c90-66fbd345fd55",
+      "name": "CategoriaElogio"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "U06S133CL86",
+          "mode": "list",
+          "cachedResultName": "henriqueabreulobo"
+        },
+        "text": "=🤔 *Feedback Precisando de Revisão*\n\n*Cliente:* {{ $('ExtrairDados').item.json.output.nome_cliente }}\n\n*Assunto:* {{ $('Dados').item.json.assunto }}\n*Corpo do Email:*\n{{ $('Dados').item.json.texto }}\n\nQual categoria você encaixaria este feedback?",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2752,
+        656
+      ],
+      "id": "06420885-ab4d-4fe3-9573-3fc59dfa6b9a",
+      "name": "Fallback",
+      "webhookId": "9626099c-d17b-4421-b1fa-34a6f342f18e",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "XJKSggpahOHt88WE",
+          "name": "Slack - Mercatto"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a41cab03-01bf-4b53-a76f-0734e324850c",
+              "name": "categoria",
+              "value": "outro",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2976,
+        656
+      ],
+      "id": "3362801b-3561-4b17-9d53-11d338e98ebe",
+      "name": "CategoriaOutro"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ad4c0463-7282-4243-8532-41a22c74baee",
+              "name": "nome_cliente",
+              "value": "={{ $('ExtrairDados').item.json.output.nome_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "ae0bbe70-62c6-47e9-b460-d5411728162b",
+              "name": "item_mencionado",
+              "value": "={{ $('ExtrairDados').item.json.output.item_mencionado }}",
+              "type": "string"
+            },
+            {
+              "id": "ab223a4d-1aca-4fb8-a9f0-15a1f5231854",
+              "name": "ponto_principal",
+              "value": "={{ $('ExtrairDados').item.json.output.ponto_principal }}",
+              "type": "string"
+            },
+            {
+              "id": "bf6468df-43fe-4db6-a6d2-59071311760a",
+              "name": "urgencia",
+              "value": "={{ $('ExtrairDados').item.json.output.urgente }}",
+              "type": "boolean"
+            },
+            {
+              "id": "78b9c4f3-214f-4920-b3f2-281bc1443d01",
+              "name": "sentimento",
+              "value": "={{ $('AnalisarSentimento').item.json.sentimentAnalysis.category }}",
+              "type": "string"
+            },
+            {
+              "id": "d6f33d07-7775-4915-a540-750f129af3a3",
+              "name": "categoria",
+              "value": "={{ $json.categoria }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3280,
+        272
+      ],
+      "id": "580761b3-228b-4207-baf9-05985da79ac0",
+      "name": "DadosFinais"
+    },
+    {
+      "parameters": {
+        "options": {
+          "summarizationMethodAndPrompts": {
+            "values": {
+              "summarizationMethod": "stuff",
+              "prompt": "Escreva um resumo conciso em PT-BR de no máximo 20 palavras.\n\n\n\"{text}\"\n\n\nRESUMO CONCISO:"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainSummarization",
+      "typeVersion": 2.1,
+      "position": [
+        3616,
+        272
+      ],
+      "id": "8168ec25-0378-4c68-a48d-fc489fc1ef18",
+      "name": "ResumirFeedback"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1nqbwih2HOnLmJRCliFG5FOE8UV21nOpc4zhDaM5Nw54",
+          "mode": "list",
+          "cachedResultName": "Feedbacks Mercattone",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nqbwih2HOnLmJRCliFG5FOE8UV21nOpc4zhDaM5Nw54/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "feedbacks",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nqbwih2HOnLmJRCliFG5FOE8UV21nOpc4zhDaM5Nw54/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cliente": "={{ $('DadosFinais').item.json.nome_cliente }}",
+            "problema": "={{ $('DadosFinais').item.json.ponto_principal }}",
+            "sentimento": "={{ $('DadosFinais').item.json.sentimento }}",
+            "categoria": "={{ $('DadosFinais').item.json.categoria }}",
+            "resumo": "={{ $json.output.text }}",
+            "data": "={{ $today.format('dd/MM/yyyy') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "cliente",
+              "displayName": "cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "problema",
+              "displayName": "problema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sentimento",
+              "displayName": "sentimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "categoria",
+              "displayName": "categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resumo",
+              "displayName": "resumo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data",
+              "displayName": "data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4032,
+        272
+      ],
+      "id": "61335b62-7dbf-4d85-8ad0-dfb9a5d805a4",
+      "name": "RegistrarFeedback",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rWPznWqOA1pa7tOE",
+          "name": "Google Sheets - Mercatto"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1072,
+        832
+      ],
+      "id": "f4bfc582-42b8-4876-a446-7bb45ba4b11a",
+      "name": "AgendarExecucao"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1nqbwih2HOnLmJRCliFG5FOE8UV21nOpc4zhDaM5Nw54",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "feedbacks",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nqbwih2HOnLmJRCliFG5FOE8UV21nOpc4zhDaM5Nw54/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "data",
+              "lookupValue": "={{ $today.format('dd/MM/yyyy') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1280,
+        832
+      ],
+      "id": "03eab005-969f-45c2-a3c4-907ea5897e0b",
+      "name": "LerFeedbacks",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rWPznWqOA1pa7tOE",
+          "name": "Google Sheets - Mercattone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3.5-flash",
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        1024
+      ],
+      "id": "be5b9421-9e7a-45ce-abfd-b8724e6facf5",
+      "name": "Gemini-3.5-Flash1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "gR1XTpxsL5gxzlhP",
+          "name": "OpenRouter - Pessoal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Feedbacks de hoje:\n{{ JSON.stringify($input.all(), null, 2) }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Você é um analista de feedback. Gere um briefing executivo em HTML para o CEO sobre os feedbacks de hoje.\n\nUse tags HTML simples (h1, h2, p, ul, li, b, i). Inclua: título com a data, resumo do dia (total + sentimentos + categorias), casos urgentes, destaques e uma recomendação acionável.\n\nRetorne apenas o HTML, sem blocos de código, sem markdown, sem ```html."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1488,
+        832
+      ],
+      "id": "f7c62566-47d5-4921-ad0b-594efe5b2a73",
+      "name": "GerarResumo"
+    },
+    {
+      "parameters": {
+        "sendTo": "henrique.n8n.7@gmail.com",
+        "subject": "Relatório Diário de Feedbacks",
+        "message": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Central de Feedback Mercattone"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1840,
+        832
+      ],
+      "id": "ef913926-2b5b-4101-b7a6-e80c4bd6fca8",
+      "name": "EnviarResumo",
+      "webhookId": "f8260901-56ca-4e5f-973c-708a26625b13",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DFXfh78q5tu9uc8q",
+          "name": "Gmail - Mercattone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 1724,
+        "width": 4352,
+        "color": 7
+      },
+      "id": "0f7d8fd9-bf48-4834-bf42-42ca7d8df44c",
+      "name": "Sticky Note Background",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -512
+      ]
+    },
+    {
+      "parameters": {
+        "content": "![Logo Hashtag](https://www.hashtagtreinamentos.com/wp-content/uploads/2022/05/Logo-Hashtag-Original-1024x458.png.webp)",
+        "height": 144,
+        "color": 7
+      },
+      "id": "534c6366-486e-42f3-b3ad-3fa898198223",
+      "name": "Sticky Note Logo",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Pipeline de Analise com IA: Central de Feedbacks Mercattone\n\n**Cenario:** E-commerce Mercattone (~200 pedidos/dia) recebe feedbacks por email. IA analisa, classifica e roteia para o time certo (5 destinos). Cliente recebe resposta automatica na thread original. As 18h30, briefing executivo cai no email do CEO.\n\n**Por que isso importa:** primeiro projeto com IA em pipeline deterministico. 5 nos de IA distintos (Information Extractor, Sentiment Analysis, Text Classifier, Summarization Chain e Basic LLM Chain). O aluno sai sabendo a diferenca entre Agent e Chain.\n\n**Nos novos:** Gmail Trigger + Filter, Information Extractor (com boolean), IF fan-out, Sentiment Analysis, Text Classifier, Slack post + DM, Gmail Reply to Message, Summarization Chain, Basic LLM Chain, Schedule Trigger.\n\n**Configurar:** Gmail (receber + responder) + Google Sheets (planilha \"Feedbacks Mercattone\") + Slack (canais #fb-bugs, #fb-reclamacoes, #fb-sugestoes, #fb-elogios) + OpenRouter (Gemini 3.5 Flash).",
+        "height": 312,
+        "width": 2500,
+        "color": 7
+      },
+      "id": "c9118888-44cf-44f9-9854-6b0240e421ad",
+      "name": "Sticky Note Titulo",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        -336
+      ]
+    },
+    {
+      "parameters": {
+        "content": "**1. Recebimento e Extracao**\n\nGmail Trigger com filtro de remetente (polling 1 min).\nSet \"Dados\" padroniza o payload (nome, email, assunto, texto).\nInformation Extractor com 4 atributos: cliente, item, problema, **urgente (boolean)**.\n\nO boolean alimenta o IF da proxima etapa.",
+        "height": 836,
+        "width": 844,
+        "color": 7
+      },
+      "id": "680b77f4-ca14-4d20-8668-ba56b4e951da",
+      "name": "Sticky Note 1 Recebimento",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "content": "**2. Alerta de Urgencia (Paralelo)**\n\nIF avalia o boolean do IE.\nTRUE: Slack DM imediato para o gerente.\nFALSE: segue para o pipeline de analise.\n\nPadrao fan-out: urgentes recebem alerta sem esperar a analise completa.",
+        "height": 548,
+        "width": 470,
+        "color": 7
+      },
+      "id": "e81c7820-e52a-47d1-8063-81431a340483",
+      "name": "Sticky Note 2 Urgencia",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        736,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "content": "**3. Roteadores de IA**\n\nSentiment Analysis: 3 outputs (Positivo, Neutro, Negativo).\nText Classifier: 5 outputs (Bug, Reclamacao, Sugestao, Elogio, fallback Other).\n\nTodos os 3 outputs do SA conectam ao Classifier.",
+        "height": 556,
+        "width": 1168,
+        "color": 7
+      },
+      "id": "5c5f05b0-d967-4bb8-aff6-9bebaa65bcf9",
+      "name": "Sticky Note 3 Roteadores IA",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "content": "**4. 5 Branches por Categoria**\n\n🐛 Bug → #fb-bugs → Set Bug\n\n⚠️ Reclamacao → #fb-reclamacoes → Auto-reply na thread → Set Reclamacao\n\n💡 Sugestao → #fb-sugestoes → Set Sugestao\n\n🎉 Elogio → #fb-elogios → Pede depoimento → Set Elogio\n\n🤔 Other → DM CX Lead → Set Other\n\nCada branch tem texto, canal e acoes proprios. Nao e copia-cola - e design de fluxo.\n\nTodas as 5 convergem em DadosFinais.",
+        "height": 1308,
+        "width": 1000,
+        "color": 7
+      },
+      "id": "782c66a7-7939-474e-91c1-92e9a3894b44",
+      "name": "Sticky Note 4 Branches",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "content": "**5. Consolidacao e Persistencia**\n\nDadosFinais une dados do IE + SA + categoria do branch.\nResumirFeedback (Summarization Chain, modo stuff, ~20 palavras).\nRegistrarFeedback faz append na planilha Feedbacks Mercattone.\n\nCada email vira uma linha estruturada (6 colunas).",
+        "height": 684,
+        "width": 778,
+        "color": 7
+      },
+      "id": "b7a354b7-77df-4121-a086-3c4408d55703",
+      "name": "Sticky Note 5 Consolidacao",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3408,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "content": "**6. Fluxo 2 - Briefing Executivo Diario**\n\nSchedule Trigger as 18h30.\nSheets Read filtrando por data de hoje.\nBasic LLM Chain gera HTML pronto (sem Output Parser - IA e o designer).\nGmail envia o HTML direto para o CEO.\n\nPadrao \"dados-no-banco + IA-gera-apresentacao\". 2 triggers no mesmo workflow, execucoes independentes.\n\nModelo separado (temperature 0.5) - mais criativo que os roteadores do Fluxo 1.",
+        "height": 648,
+        "width": 1628,
+        "color": 7
+      },
+      "id": "a44800b2-0ca0-440a-82fc-b558a5ac60f7",
+      "name": "Sticky Note 6 Fluxo 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "content": "**Modelo Compartilhado**\n\nGemini 3.5 Flash (temperature 0.2).\nServe 4 nos: IE, SA, Classifier, Summarization.\n\n1 modelo, varios consumidores. Economiza configuracao.",
+        "height": 372,
+        "width": 850,
+        "color": 7
+      },
+      "id": "1652a258-d7d4-42b5-b88f-a0b92ec1e7f1",
+      "name": "Sticky Note 7 Modelo IA",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        432
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "EmailRecebido": {
+      "main": [
+        [
+          {
+            "node": "Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dados": {
+      "main": [
+        [
+          {
+            "node": "ExtrairDados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini-3.5-Flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ExtrairDados",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AnalisarSentimento",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "CategorizarFeedbacks",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "ResumirFeedback",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtrairDados": {
+      "main": [
+        [
+          {
+            "node": "Urgente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urgente?": {
+      "main": [
+        [
+          {
+            "node": "EnviarUrgencia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AnalisarSentimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AnalisarSentimento": {
+      "main": [
+        [
+          {
+            "node": "CategorizarFeedbacks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CategorizarFeedbacks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CategorizarFeedbacks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CategorizarFeedbacks": {
+      "main": [
+        [
+          {
+            "node": "EnviarBug",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "EnviarReclamacao",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "EnviarSugestao",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "EnviarElogio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EnviarBug": {
+      "main": [
+        [
+          {
+            "node": "CategoriaBug",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EnviarReclamacao": {
+      "main": [
+        [
+          {
+            "node": "ResponderAutomaticamente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ResponderAutomaticamente": {
+      "main": [
+        [
+          {
+            "node": "CategoriaReclamacao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EnviarSugestao": {
+      "main": [
+        [
+          {
+            "node": "CategoriaSugestao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CategoriaReclamacao": {
+      "main": [
+        [
+          {
+            "node": "DadosFinais",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CategoriaSugestao": {
+      "main": [
+        [
+          {
+            "node": "DadosFinais",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CategoriaBug": {
+      "main": [
+        [
+          {
+            "node": "DadosFinais",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ResponderAutomaticamente1": {
+      "main": [
+        [
+          {
+            "node": "CategoriaElogio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EnviarElogio": {
+      "main": [
+        [
+          {
+            "node": "ResponderAutomaticamente1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback": {
+      "main": [
+        [
+          {
+            "node": "CategoriaOutro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CategoriaElogio": {
+      "main": [
+        [
+          {
+            "node": "DadosFinais",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CategoriaOutro": {
+      "main": [
+        [
+          {
+            "node": "DadosFinais",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DadosFinais": {
+      "main": [
+        [
+          {
+            "node": "ResumirFeedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ResumirFeedback": {
+      "main": [
+        [
+          {
+            "node": "RegistrarFeedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AgendarExecucao": {
+      "main": [
+        [
+          {
+            "node": "LerFeedbacks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LerFeedbacks": {
+      "main": [
+        [
+          {
+            "node": "GerarResumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini-3.5-Flash1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "GerarResumo",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GerarResumo": {
+      "main": [
+        [
+          {
+            "node": "EnviarResumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "45b42f5e-9553-43bb-9968-cbaa3ec2e76e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c082c024c19e659c9d54fd28dd5f330636a2c8178335a805ff229161f9af9186"
+  },
+  "nodeGroups": [],
+  "id": "E95SwpwmHWeyKDmy",
+  "tags": []
+}
